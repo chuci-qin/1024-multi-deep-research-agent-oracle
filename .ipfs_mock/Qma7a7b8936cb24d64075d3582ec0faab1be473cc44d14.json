@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "market_id": 1,
+  "question": "Is water wet?",
+  "resolution_criteria": "Determine if water is considered wet.",
+  "research_timestamp": "2025-12-18T18:13:12.769375",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-2.0-flash-exp",
+      "strategy": "comprehensive",
+      "outcome": "UNDETERMINED",
+      "confidence": 0.7,
+      "reasoning": "The question of whether water is wet is a semantic debate revolving around the definition of \"wet.\" Scientifically, wetness describes a liquid's ability to adhere to a solid surface. However, colloquially, \"wet\" often describes something covered or saturated with a liquid, particularly water. This leads to conflicting viewpoints. Some argue that water cannot be wet because it *is* the liquid causing wetness, while others argue that water can make other water molecules wet. The lack of a universally agreed-upon definition of \"wet\" in this context makes a definitive \"yes\" or \"no\" answer impossible.",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 22.75454306602478,
+      "timestamp": "2025-12-18T18:13:11.519044",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-2.0-flash-exp",
+      "strategy": "focused",
+      "outcome": "UNDETERMINED",
+      "confidence": 0.7,
+      "reasoning": "The question of whether water is wet is a semantic debate revolving around the definition of \"wet.\" Scientifically, wetness describes a liquid's ability to adhere to a solid surface. However, colloquially, \"wet\" often describes something covered or saturated with a liquid, particularly water. This leads to conflicting viewpoints. Some argue that water cannot be wet because it *is* the liquid causing wetness, not something being acted upon. Others argue that water *can* be wet because water molecules adhere to each other, making water itself saturated with water. The lack of a universally agreed-upon definition of \"wet\" in this context makes a definitive answer impossible.",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 23.155094146728516,
+      "timestamp": "2025-12-18T18:13:11.920313",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-3",
+      "model": "gemini-2.0-flash-exp",
+      "strategy": "diverse",
+      "outcome": "UNDETERMINED",
+      "confidence": 0.6,
+      "reasoning": "The question of whether water is wet is a semantic debate revolving around the definition of \"wet.\" Scientifically, wetness describes a liquid's ability to adhere to a solid surface. However, colloquially, \"wet\" often describes something covered or saturated with a liquid, typically water. This leads to conflicting viewpoints. Some argue that water cannot be wet because it *is* the liquid causing wetness, while others argue that water can make other water wet, thus fulfilling the colloquial definition. The lack of a universally agreed-upon definition makes a definitive \"yes\" or \"no\" answer impossible.",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 24.003639936447144,
+      "timestamp": "2025-12-18T18:13:12.769169",
+      "error": null
+    }
+  ],
+  "consensus": {
+    "reached": false,
+    "outcome": "INVALID",
+    "confidence": 0.0,
+    "agreement_ratio": 0.0,
+    "weighted_ratio": 0.0,
+    "total_sources": 0,
+    "unique_sources": 0,
+    "source_overlap": 0.0,
+    "agent_count": 3,
+    "requires_human_review": true,
+    "reason": "Only 0 valid results, need 3"
+  },
+  "merged_sources": []
+}

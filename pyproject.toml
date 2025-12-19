@@ -1,0 +1,121 @@
+[project]
+name = "multi-agent-oracle"
+version = "0.1.0"
+description = "An Open-Source, AI-Powered Decentralized Oracle for Prediction Markets"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+authors = [
+    { name = "1024 Team", email = "dev@1024chain.com" }
+]
+keywords = ["oracle", "prediction-market", "ai", "llm", "blockchain", "gemini"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    # AI/LLM
+    "google-generativeai>=0.4.0",
+    "openai>=1.12.0",
+    "anthropic>=0.18.0",
+    
+    # Web Framework
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.27.0",
+    "httpx>=0.27.0",
+    
+    # Data Validation
+    "pydantic>=2.6.0",
+    "pydantic-settings>=2.2.0",
+    
+    # CLI
+    "typer>=0.9.0",
+    "rich>=13.7.0",
+    
+    # Logging
+    "structlog>=24.1.0",
+    
+    # Utilities
+    "tenacity>=8.2.0",
+    "cachetools>=5.3.0",
+    "python-dotenv>=1.0.0",
+    
+    # Blockchain (optional but included)
+    # "solana>=0.32.0",
+    # "anchorpy>=0.18.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.2.0",
+    "mypy>=1.8.0",
+    "black>=24.2.0",
+    "pre-commit>=3.6.0",
+    "respx>=0.20.0",
+]
+
+blockchain = [
+    "solana>=0.32.0",
+    "anchorpy>=0.18.0",
+    "web3>=6.15.0",
+]
+
+all = [
+    "multi-agent-oracle[dev,blockchain]",
+]
+
+[project.scripts]
+oracle = "oracle.cli.main:main"
+
+[project.urls]
+Homepage = "https://github.com/1024chain/1024-multi-deep-research-agent-oracle"
+Documentation = "https://docs.1024oracle.xyz"
+Repository = "https://github.com/1024chain/1024-multi-deep-research-agent-oracle"
+Issues = "https://github.com/1024chain/1024-multi-deep-research-agent-oracle/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["oracle"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["oracle"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+]

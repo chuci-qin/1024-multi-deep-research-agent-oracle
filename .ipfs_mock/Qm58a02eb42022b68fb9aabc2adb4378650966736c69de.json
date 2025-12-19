@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "market_id": 2,
+  "question": "Did Bitcoin reach $100,000 in December 2024?",
+  "resolution_criteria": "Check if BTC price exceeded $100,000 USD at any point in December 2024.",
+  "research_timestamp": "2025-12-18T18:47:22.147059",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-1.5-flash",
+      "strategy": "comprehensive",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 0.14530682563781738,
+      "timestamp": "2025-12-18T18:47:22.143298",
+      "error": "404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods."
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-1.5-flash",
+      "strategy": "focused",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 0.1481180191040039,
+      "timestamp": "2025-12-18T18:47:22.146933",
+      "error": "404 models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods."
+    }
+  ],
+  "consensus": {
+    "reached": false,
+    "outcome": "INVALID",
+    "confidence": 0.0,
+    "agreement_ratio": 0.0,
+    "weighted_ratio": 0.0,
+    "total_sources": 0,
+    "unique_sources": 0,
+    "source_overlap": 0.0,
+    "agent_count": 2,
+    "requires_human_review": true,
+    "reason": "Need 3+ agents, got 2"
+  },
+  "merged_sources": []
+}

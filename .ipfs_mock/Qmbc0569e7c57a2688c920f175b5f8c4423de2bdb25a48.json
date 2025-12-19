@@ -1,0 +1,62 @@
+{
+  "version": "1.0.0",
+  "market_id": 1,
+  "question": "Is the sky blue?",
+  "resolution_criteria": "Determine if the sky appears blue during daytime.",
+  "research_timestamp": "2025-12-18T18:12:15.364265",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-2.0-flash-exp",
+      "strategy": "comprehensive",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 7.081031799316406e-05,
+      "timestamp": "2025-12-18T18:12:15.364011",
+      "error": "'NoneType' object has no attribute 'generate_content'"
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-2.0-flash-exp",
+      "strategy": "focused",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 4.7206878662109375e-05,
+      "timestamp": "2025-12-18T18:12:15.364106",
+      "error": "'NoneType' object has no attribute 'generate_content'"
+    },
+    {
+      "agent_id": "gemini-agent-3",
+      "model": "gemini-2.0-flash-exp",
+      "strategy": "diverse",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 4.410743713378906e-05,
+      "timestamp": "2025-12-18T18:12:15.364167",
+      "error": "'NoneType' object has no attribute 'generate_content'"
+    }
+  ],
+  "consensus": {
+    "reached": false,
+    "outcome": "INVALID",
+    "confidence": 0.0,
+    "agreement_ratio": 0.0,
+    "weighted_ratio": 0.0,
+    "total_sources": 0,
+    "unique_sources": 0,
+    "source_overlap": 0.0,
+    "agent_count": 3,
+    "requires_human_review": true,
+    "reason": "Only 0 valid results, need 3"
+  },
+  "merged_sources": []
+}

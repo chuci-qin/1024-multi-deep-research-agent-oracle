@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "market_id": 3,
+  "question": "Did Bitcoin reach $100,000 in December 2024?",
+  "resolution_criteria": "Check if BTC price exceeded $100,000 USD at any point in December 2024.",
+  "research_timestamp": "2025-12-18T18:48:59.934126",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-3-flash-preview",
+      "strategy": "comprehensive",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 0.24089598655700684,
+      "timestamp": "2025-12-18T18:48:59.933869",
+      "error": "429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. "
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-3-flash-preview",
+      "strategy": "focused",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 0.23903584480285645,
+      "timestamp": "2025-12-18T18:48:59.932810",
+      "error": "429 You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/usage?tab=rate-limit. "
+    }
+  ],
+  "consensus": {
+    "reached": false,
+    "outcome": "INVALID",
+    "confidence": 0.0,
+    "agreement_ratio": 0.0,
+    "weighted_ratio": 0.0,
+    "total_sources": 0,
+    "unique_sources": 0,
+    "source_overlap": 0.0,
+    "agent_count": 2,
+    "requires_human_review": true,
+    "reason": "Need 3+ agents, got 2"
+  },
+  "merged_sources": []
+}
