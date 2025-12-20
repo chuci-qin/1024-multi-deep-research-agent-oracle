@@ -103,9 +103,12 @@ class OracleAPI:
     
     async def initialize(self):
         """Initialize the oracle."""
+        import os
+        num_agents = int(os.getenv("MIN_AGENTS", "3"))
+        
         self.oracle = MultiAgentOracle(
             config=OracleConfig(
-                num_agents=3,
+                num_agents=num_agents,
                 enable_ipfs=True,
             )
         )

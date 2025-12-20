@@ -1,0 +1,364 @@
+{
+  "version": "1.0.0",
+  "market_id": 105,
+  "question": "Did Bitcoin reach $100,000 in December 2024?",
+  "resolution_criteria": "Check if BTC/USD price exceeded $100,000 at any point during December 2024.",
+  "research_timestamp": "2025-12-19T08:13:34.057453",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-3-flash-preview",
+      "strategy": "comprehensive",
+      "outcome": "YES",
+      "confidence": 1.0,
+      "reasoning": "Bitcoin (BTC) officially surpassed the $100,000 price milestone for the first time in history on December 5, 2024. The price surge was largely driven by market optimism following President-elect Donald Trump's nomination of Paul Atkins, a known cryptocurrency advocate, to lead the U.S. Securities and Exchange Commission (SEC) on December 4. Major financial news outlets and data platforms, including Reuters, Bloomberg, and CoinMarketCap, confirmed that Bitcoin reached intraday highs exceeding $103,000 on December 5. The upward trend continued through mid-December, with Bitcoin reaching a new all-time high of approximately $108,319 on December 17, 2024, before experiencing some volatility. As of December 19, 2024, Bitcoin remains in the high $90,000 to low $100,000 range, having clearly met the resolution criteria of exceeding $100,000 during the month.",
+      "sources": [
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFD0kUgw9FXubZygWQ1_K0c6UzP6nI4BmN5QM6VFZNCL81zpjUpPKDiW5S9ub3S1Ia2sV8KYDtBkshFkOBAkN1p3qM00lAepaIWzeQXThWPmnv-dmQ-UU9KUDPgvM5TBhoMaqKEsoCc2943Il2WsoE=",
+          "title": "binance.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFINC3ojijEqCATIMPTj_UCdZiAQnmo4KrUWNBIwVKXCgT4SY90djZ-s0f1S4Po1eKd7YHRC705dvRyuVJ9M8L5i8RCKL7ku5bjML-_pHqD7AtMjHWk9QXYeOACRQQh0wx-q9XrwNj_QlP9HSUYC9NhMzRb3qLQg26gwMwUJZpYg0I9t90p7-eFkDw8-6vR9PLE",
+          "title": "trendingtopics.eu",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFN9z1MYvGdw_sMDQrSi_xCSdKYcbzddgstiQpCNlmwoDXvdDp_-oRngSPNdgzPQpD0pLQRQFpMnWgwRkHLN5dwVGmyqpizIXdtFyROhZCWwOaXN2dO072XWmnhdz1ddVKV0gn-DHrNw9BSFz-ObEOJlVtdn-YAwjN-FSuEaBzE7aWeJMpRp_lGaStup2ytijxvvYY-yx4U8U8QcSJcqmQSVAhIU7lhaOBWvWvJ5cjS0W8dO4KLtNThDr9c92m3tSbO0B5jEKK0tvIwg9H5OlIiX_5API9y_Qt6mEEONtWI9BJr_SEagrlOM8MdfIi5nMLHs6_Kaac=",
+          "title": "livemint.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        }
+      ],
+      "source_count": 3,
+      "research_duration_seconds": 29.91228485107422,
+      "timestamp": "2025-12-19T08:13:34.056566",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-3-flash-preview",
+      "strategy": "focused",
+      "outcome": "YES",
+      "confidence": 1.0,
+      "reasoning": "Bitcoin surpassed the $100,000 milestone for the first time on December 5, 2024, following a period of intense market optimism. It reached a monthly high of approximately $108,250 on December 17, 2024, before experiencing some volatility. The event was widely documented by global financial news organizations and verified by exchange price history.",
+      "sources": [
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGQHY1EvhYN6Mo596QRomLIQR8EXHJSt5m6MLAK1FzN0KGaSgwuYvzPgUF2Zo201hGM5PJH4xRZ5qOEtuwCmB5jSCCSbxjIASLDp8z4WzgTbQe7eVf6BZeDB_2irtY8amyCMibcA2trbP7RGN_33-5cCzy4Hg==",
+          "title": "bankrate.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFs3ZvzCKgcv4WCx6PjZdv5CVr5kTXcvPyn6pff9EoDA6uHx5rAne4sYYVCKyS8dMj-0CHbJ2uVhi23_CpCJ_NsVT6LHT0wfQuLOGWTDu7xM-xTLf4iV3LDVWPRUTxtVhs9DV5fYQ7Oial1cA==",
+          "title": "wikipedia.org",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFdL_B3HNjJLG0cn7j8dNFNPcUrT0ap5DcvKLXsK1rR5R-AKDndYpFek7VcSKb540GjTt4G0stCTZXQFXfpteQoSpnt4tOaAkqm3tvvVK_ww_VkJm3qyvnpheN-V9TXSKYOirfDYCoZFkE1Wvm7s7olk7sP1nNh5f_pIoaPrCN-ONM_OEu5enr2y_VJXNte31b-",
+          "title": "cbsnews.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFAJjBLP6asqdxoQkWuJHapr1ZK6pRKF1sUR208FeQMZ7SlTfvYhg-zGCg7l5c3CZdSU--cY7wNfBae4moGZKi_gCtH7uOxePJlzvpLqOe0fKCU5XBfTZPDsgSyd8jTgAUi",
+          "title": "coinbase.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHR2fP96uf8d8fd9j38YkLZnvsqvFv_ewbzz-tAZDHWz8ywA-CSrTPuawhxS0St-i1IcVD0LL8ZR-T_PnZP9g9SlrIS1DI-cPiy-E75Qof2OFfbJ3MhVWaqA_VW1TyIkDujCwiwYYJ9WUKIxLPJnnlU2SHpd9mugHDcjzUsRL6Q_ddU1nhH70-upzFG_PwgVTP9Ow==",
+          "title": "trendingtopics.eu",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGR47k1vjNfkHjn30EFk19TMJj3QRGtQijtGfhLE12td1oTwJ8a0x62g88m22DGI3uRivzGFyiC687Xke_kPrilgLfiBgeX3hzjVMkY_q80Bm13B_TaTJ6SreKxJUnv8MI=",
+          "title": "wikipedia.org",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGz-nkEEn7ZP6-C5EyUcF2c0YXJ8-NftBndhjPc8x-W2m1bV01UjCodWtMyiKFQKSrVRr2sgV4rW0vO3t0-cBEFmCJdYTM2njNh3GUA63oEDX5YiR9hS-rdjHeTbqB75DoTU1Xvy9mEaEOST3KfDWgMnExJLyoRR9PyzR-RQJxLVlTKZm2jxQ==",
+          "title": "investopedia.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF4R9I52W47lEM6p0Zt72C9HEhOdUPKhBz6tObGPprHHUF7tmG-197DxOQ9Wdzdynh2jcPgCNLIEnQNpQ_qnSvm758LJvXhD9qr1_hwWxtav2OUf6bysHlFBAurQJ6RPKnynCCku3SODuMP8zGPhtxj",
+          "title": "binance.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEyOewuvK5Z41QSqLyaxVCWqBaX2_dt3oFXnHE44s95WAM4y2h0xlck3v1TMIc0_ovmsPntLT7AZ1oTcqgewP80HeC8CVLkfRgHHf5jYzCbnyyDWsG_A9zaVjOklEitKGoehQSkv_fyTWITMHxQr4p7E_pVlpY78W-XA4Z6S-A=",
+          "title": "relai.app",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQErwY6zZ4-kmRXlq2DkQ86R4YMk0uJ9iASNjkietQlzXatsOo9i-ijp9PXHbHDHPsZAOBpw8Xm9Btx9NCKfIHkA4trmsuyhCos38R6Icso7RUklIvd1mvt4Lt5vkGPrBWzoq34CCfdYGF-X0RrMPx-EOFF7oWKsaa1Tuu2zCptqjy0jqU-Cg3pNjubvn7cV",
+          "title": "mexicobusiness.news",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        }
+      ],
+      "source_count": 10,
+      "research_duration_seconds": 18.606583833694458,
+      "timestamp": "2025-12-19T08:13:22.752798",
+      "error": null
+    }
+  ],
+  "consensus": {
+    "reached": true,
+    "outcome": "YES",
+    "confidence": 1.0,
+    "agreement_ratio": 1.0,
+    "weighted_ratio": 1.0,
+    "total_sources": 13,
+    "unique_sources": 13,
+    "source_overlap": 0.0,
+    "agent_count": 2,
+    "requires_human_review": false,
+    "reason": null
+  },
+  "merged_sources": [
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFD0kUgw9FXubZygWQ1_K0c6UzP6nI4BmN5QM6VFZNCL81zpjUpPKDiW5S9ub3S1Ia2sV8KYDtBkshFkOBAkN1p3qM00lAepaIWzeQXThWPmnv-dmQ-UU9KUDPgvM5TBhoMaqKEsoCc2943Il2WsoE=",
+      "title": "binance.com",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-1"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFINC3ojijEqCATIMPTj_UCdZiAQnmo4KrUWNBIwVKXCgT4SY90djZ-s0f1S4Po1eKd7YHRC705dvRyuVJ9M8L5i8RCKL7ku5bjML-_pHqD7AtMjHWk9QXYeOACRQQh0wx-q9XrwNj_QlP9HSUYC9NhMzRb3qLQg26gwMwUJZpYg0I9t90p7-eFkDw8-6vR9PLE",
+      "title": "trendingtopics.eu",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-1"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFN9z1MYvGdw_sMDQrSi_xCSdKYcbzddgstiQpCNlmwoDXvdDp_-oRngSPNdgzPQpD0pLQRQFpMnWgwRkHLN5dwVGmyqpizIXdtFyROhZCWwOaXN2dO072XWmnhdz1ddVKV0gn-DHrNw9BSFz-ObEOJlVtdn-YAwjN-FSuEaBzE7aWeJMpRp_lGaStup2ytijxvvYY-yx4U8U8QcSJcqmQSVAhIU7lhaOBWvWvJ5cjS0W8dO4KLtNThDr9c92m3tSbO0B5jEKK0tvIwg9H5OlIiX_5API9y_Qt6mEEONtWI9BJr_SEagrlOM8MdfIi5nMLHs6_Kaac=",
+      "title": "livemint.com",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-1"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGQHY1EvhYN6Mo596QRomLIQR8EXHJSt5m6MLAK1FzN0KGaSgwuYvzPgUF2Zo201hGM5PJH4xRZ5qOEtuwCmB5jSCCSbxjIASLDp8z4WzgTbQe7eVf6BZeDB_2irtY8amyCMibcA2trbP7RGN_33-5cCzy4Hg==",
+      "title": "bankrate.com",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFs3ZvzCKgcv4WCx6PjZdv5CVr5kTXcvPyn6pff9EoDA6uHx5rAne4sYYVCKyS8dMj-0CHbJ2uVhi23_CpCJ_NsVT6LHT0wfQuLOGWTDu7xM-xTLf4iV3LDVWPRUTxtVhs9DV5fYQ7Oial1cA==",
+      "title": "wikipedia.org",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFdL_B3HNjJLG0cn7j8dNFNPcUrT0ap5DcvKLXsK1rR5R-AKDndYpFek7VcSKb540GjTt4G0stCTZXQFXfpteQoSpnt4tOaAkqm3tvvVK_ww_VkJm3qyvnpheN-V9TXSKYOirfDYCoZFkE1Wvm7s7olk7sP1nNh5f_pIoaPrCN-ONM_OEu5enr2y_VJXNte31b-",
+      "title": "cbsnews.com",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFAJjBLP6asqdxoQkWuJHapr1ZK6pRKF1sUR208FeQMZ7SlTfvYhg-zGCg7l5c3CZdSU--cY7wNfBae4moGZKi_gCtH7uOxePJlzvpLqOe0fKCU5XBfTZPDsgSyd8jTgAUi",
+      "title": "coinbase.com",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHR2fP96uf8d8fd9j38YkLZnvsqvFv_ewbzz-tAZDHWz8ywA-CSrTPuawhxS0St-i1IcVD0LL8ZR-T_PnZP9g9SlrIS1DI-cPiy-E75Qof2OFfbJ3MhVWaqA_VW1TyIkDujCwiwYYJ9WUKIxLPJnnlU2SHpd9mugHDcjzUsRL6Q_ddU1nhH70-upzFG_PwgVTP9Ow==",
+      "title": "trendingtopics.eu",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGR47k1vjNfkHjn30EFk19TMJj3QRGtQijtGfhLE12td1oTwJ8a0x62g88m22DGI3uRivzGFyiC687Xke_kPrilgLfiBgeX3hzjVMkY_q80Bm13B_TaTJ6SreKxJUnv8MI=",
+      "title": "wikipedia.org",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGz-nkEEn7ZP6-C5EyUcF2c0YXJ8-NftBndhjPc8x-W2m1bV01UjCodWtMyiKFQKSrVRr2sgV4rW0vO3t0-cBEFmCJdYTM2njNh3GUA63oEDX5YiR9hS-rdjHeTbqB75DoTU1Xvy9mEaEOST3KfDWgMnExJLyoRR9PyzR-RQJxLVlTKZm2jxQ==",
+      "title": "investopedia.com",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF4R9I52W47lEM6p0Zt72C9HEhOdUPKhBz6tObGPprHHUF7tmG-197DxOQ9Wdzdynh2jcPgCNLIEnQNpQ_qnSvm758LJvXhD9qr1_hwWxtav2OUf6bysHlFBAurQJ6RPKnynCCku3SODuMP8zGPhtxj",
+      "title": "binance.com",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEyOewuvK5Z41QSqLyaxVCWqBaX2_dt3oFXnHE44s95WAM4y2h0xlck3v1TMIc0_ovmsPntLT7AZ1oTcqgewP80HeC8CVLkfRgHHf5jYzCbnyyDWsG_A9zaVjOklEitKGoehQSkv_fyTWITMHxQr4p7E_pVlpY78W-XA4Z6S-A=",
+      "title": "relai.app",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    },
+    {
+      "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQErwY6zZ4-kmRXlq2DkQ86R4YMk0uJ9iASNjkietQlzXatsOo9i-ijp9PXHbHDHPsZAOBpw8Xm9Btx9NCKfIHkA4trmsuyhCos38R6Icso7RUklIvd1mvt4Lt5vkGPrBWzoq34CCfdYGF-X0RrMPx-EOFF7oWKsaa1Tuu2zCptqjy0jqU-Cg3pNjubvn7cV",
+      "title": "mexicobusiness.news",
+      "snippet": "",
+      "date": null,
+      "category": "domain_specific",
+      "relevance_score": 0.8,
+      "credibility_score": 0.8,
+      "cited_by": [
+        "gemini-agent-2"
+      ]
+    }
+  ]
+}

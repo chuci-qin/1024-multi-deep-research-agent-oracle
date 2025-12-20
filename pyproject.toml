@@ -20,7 +20,7 @@ classifiers = [
 
 dependencies = [
     # AI/LLM
-    "google-generativeai>=0.4.0",
+    "google-genai>=1.0.0",  # New Gemini SDK with Google Search grounding
     "openai>=1.12.0",
     "anthropic>=0.18.0",
     

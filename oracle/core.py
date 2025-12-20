@@ -75,10 +75,11 @@ class MultiAgentOracle:
             self.agents = self._create_default_agents()
         
         # Initialize consensus engine
+        # min_agents should match the actual number of agents we're using
         self.consensus_engine = consensus_engine or ConsensusEngine(
             ConsensusConfig(
                 threshold=self.config.consensus_threshold,
-                min_agents=min(self.config.num_agents, 3),
+                min_agents=len(self.agents),  # Use actual agent count
             )
         )
         

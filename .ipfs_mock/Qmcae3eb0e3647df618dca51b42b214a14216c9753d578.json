@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "market_id": 100,
+  "question": "Did Bitcoin reach $100,000 in December 2024?",
+  "resolution_criteria": "Check if BTC/USD price exceeded $100,000 at any point during December 2024 according to major exchanges like Binance, Coinbase, or CoinGecko.",
+  "research_timestamp": "2025-12-19T08:04:04.642952",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-3-flash-preview",
+      "strategy": "comprehensive",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 39.22850513458252,
+      "timestamp": "2025-12-19T08:03:55.869679",
+      "error": "Invalid operation: The `response.text` quick accessor requires the response to contain a valid `Part`, but none were returned. The candidate's [finish_reason](https://ai.google.dev/api/generate-content#finishreason) is 10. Meaning that model generated a `FunctionCall` that was invalid. Setting the [Function calling mode](https://ai.google.dev/gemini-api/docs/function-calling#function_calling_mode) to `ANY` can fix this because it enables constrained decoding."
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-3-flash-preview",
+      "strategy": "focused",
+      "outcome": "NO",
+      "confidence": 1.0,
+      "reasoning": "**\nAs of the current date, **May 22, 2024**, the month of December 2024 has not yet occurred. Therefore, it is physically and chronologically impossible for Bitcoin to have reached any price point in December 2024. \n\nBitcoin's current price (as of May 2024) is fluctuating between **$65,000 and $72,000**. Its all-time high (ATH) was recorded in March 2024 at approximately **$73,750** (depending on the exchange). While many analysts and financial institutions (such as Standard Chartered and Bernstein) have issued price targets of $100,000 or higher for late 2024 or 2025, these remain speculative projections and not historical facts.\n\nBecause the event is set in the future, the resolution for a \"Did it happen\" query must be **NO** (or \"Not yet occurred\").\n\n---\n\n### **",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 48.001402854919434,
+      "timestamp": "2025-12-19T08:04:04.642422",
+      "error": null
+    }
+  ],
+  "consensus": {
+    "reached": false,
+    "outcome": "INVALID",
+    "confidence": 0.0,
+    "agreement_ratio": 0.0,
+    "weighted_ratio": 0.0,
+    "total_sources": 0,
+    "unique_sources": 0,
+    "source_overlap": 0.0,
+    "agent_count": 2,
+    "requires_human_review": true,
+    "reason": "Need 3+ agents, got 2"
+  },
+  "merged_sources": []
+}

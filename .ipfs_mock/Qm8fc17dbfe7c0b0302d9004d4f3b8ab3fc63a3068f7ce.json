@@ -1,0 +1,159 @@
+{
+  "version": "1.0.0",
+  "market_id": 103,
+  "question": "Did Bitcoin reach $100,000 in December 2024?",
+  "resolution_criteria": "Check if BTC/USD price exceeded $100,000 at any point during December 2024.",
+  "research_timestamp": "2025-12-19T08:09:19.457992",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-3-flash-preview",
+      "strategy": "comprehensive",
+      "outcome": "YES",
+      "confidence": 1.0,
+      "reasoning": "Bitcoin surpassed the historic $100,000 price level for the first time on December 4, 2024 (UTC). The rally was widely reported by major news organizations such as Reuters, The Guardian, and The Washington Post. Following the initial breakthrough, the price continued to climb, reaching various peaks across different exchanges. Reports indicate that Bitcoin hit an all-time high of approximately $103,000 to $104,000 on December 5, and some data sources (such as Forbes and Coinbase via TradingView) recorded even higher peaks of over $108,000 around December 17, 2024, before experiencing a subsequent correction.",
+      "sources": [
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGfLwyVfwBWWYlWf5OTL-IufoJNSAn6btHEVKRB9V_uLiBZNhnJeDuiVq3Gv2CGxlAyMiK1hyfM-HZ4rGe2unnQzHma3VePtNv12DxrI3Xop4IJXrDh64zbX2fZDCumAy34eBjUp8481CS7ziiqPycMsoddUOWPvLyVeq2iVfmqhxUTFLBfrplXVlN99IYwLa-ggzMss7twuKhlg5vLbNvPMWEAeT0ISr5AjWR59LlQxfB77Vyw0hqhEXAQc_BpqQruEgv6",
+          "title": "forbes.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEZ0K9USnZ6GiOs_k6xORSjtZIDrhwIPZYDBB8HC5-LS10fJiEbletR82hdjUlrJ7d05FcgVLcMYBx2A6lSz7amNGcRw-CpKj11xcrIwwWeZMjhmRP1nAaVe9IjtjpDeXcSR9eqY1jtnyxeaSi6yQPgOjRpy1S5PvkBvLJrlO9DIpzabB8saeRlYOG-SBjN",
+          "title": "washingtonpost.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFaymzRso_h0hIRWT2bSDbVAFTpsgmBnOvLWLeyAmDGB435PCEOcZ_WrRQlrMnNdiXpDcljgGCPKL7NMci9eg-aYpiFhOliWP_mD__sBEYR2KDYdPlg6gnCW9S1fejHHCzMoZ1xcJ5W8MrBQQ==",
+          "title": "wikipedia.org",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFhi23x44ETfupJIEXKMktQOzl9HHIYUZ6S9gjGasN3XDqUVlOENN1bilatP7Dae7KfGUQ9N1roojw2exVId1m0oW3uOEewDMjgPFvdtEG23YNvZ5CzKTNZyYGYcDPfp_ldyfKWe3Jo1U_Fco0s5XcsiWlNgOUXAcGsA4yTfONYlUqIokb99Q7y",
+          "title": "investopedia.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEKpvKYe9G0999ucgt26JKHPTZxMR8hC5aV-5jLl6YJgLM5oWXnyj61VZrRqZideal8haC8OlZAw0OmpLEWcdWGLZbpwA2eSdI2XefwhpV-NQ9625PGJPJR9fhMyvDZmpTuN1fOfnoKvYiyE7H-O1bUZWGz4jjzFKtsKWeIr6Yri2doNaTIY1MMvQM9qf5L",
+          "title": "mexicobusiness.news",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHa0slbpmTHrmRFIzixXkxtyuhDWtj_BmiqMAkHnxgdaNOTKFiaHMyYIvl6IwX-WSMJ4WHdUcIPvez0z-WjU_18vBIJKovh6lN5YF8GqDIn1NPgWieJxLaQXgZOze50toop8e_64JloHSYvq6w_-JGfFxaPpdAZQFlyA_U7gXDgQz0KvaR4Bll3rvsqaSHbEIWL5Q==",
+          "title": "trendingtopics.eu",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        }
+      ],
+      "source_count": 6,
+      "research_duration_seconds": 11.838694095611572,
+      "timestamp": "2025-12-19T08:09:06.089678",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-3-flash-preview",
+      "strategy": "focused",
+      "outcome": "YES",
+      "confidence": 1.0,
+      "reasoning": "Bitcoin officially surpassed the $100,000 milestone for the first time on December 5, 2024. According to multiple authoritative sources, including CBS News, Forbes, and Investopedia, the cryptocurrency reached an intraday high of approximately $103,000 to $104,000 on that day. The price continued to experience significant volatility and growth throughout the month, reaching a new all-time high of approximately $108,250 on December 17, 2024. The rally was largely attributed to institutional inflows into Bitcoin ETFs and positive market sentiment following the 2024 U.S. Presidential election and subsequent regulatory appointments.",
+      "sources": [
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEkqJQPYn8yy02uVi6d0zWSek4O3VEQuyPq4wU63S1cG3MYTrM_jnlbVlWgNcv-QbuvXBOldzVYoP5crUsFyloGe23nN8ncoMLeAYHwhv3GguN2zRtNN3CveReYe55bY5_OJTeooNLOIf_46GHwFrLRYX9S1TrkuIUK4ceF-Ak=",
+          "title": "relai.app",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEfs_wLpfV73o_MQ2ssS6o_bHHyCBqaKmURa4HdMf9D-_LNCUfEzagl48vWPnTYSMF7cigoxAeVo9qseh-usINcGLUgLpGW9c01ZemDSnh7o4Q5dRLi4MV7leFCX7ZLx8ivdQz-wKx23lAqYJfR5hpY",
+          "title": "binance.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEDwtqAiaI3jm_7Z4lzw5P56sb98bfpg6V-yqqooz3jdLkzxM5b9x6VUSXFPvg3CP2-4YOxFfsnYezdNfiltO_-UZ45RsIH8B7imIDCotMWjZ4d_NeodTNPds9b8MFDdkOo5iFPUx51nOVuulQWhFAmk0LUg3UE55FYAguMADYNimW_UlrkFUFLSUUZ8Cnl_Cgg",
+          "title": "cbsnews.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        }
+      ],
+      "source_count": 3,
+      "research_duration_seconds": 25.204816102981567,
+      "timestamp": "2025-12-19T08:09:19.456805",
+      "error": null
+    }
+  ],
+  "consensus": {
+    "reached": false,
+    "outcome": "INVALID",
+    "confidence": 0.0,
+    "agreement_ratio": 0.0,
+    "weighted_ratio": 0.0,
+    "total_sources": 0,
+    "unique_sources": 0,
+    "source_overlap": 0.0,
+    "agent_count": 2,
+    "requires_human_review": true,
+    "reason": "Only 0 valid results, need 2"
+  },
+  "merged_sources": []
+}

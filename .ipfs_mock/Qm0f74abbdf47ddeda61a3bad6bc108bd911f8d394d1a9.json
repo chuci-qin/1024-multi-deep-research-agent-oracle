@@ -1,0 +1,49 @@
+{
+  "version": "1.0.0",
+  "market_id": 101,
+  "question": "Did Bitcoin reach $100,000 in December 2024?",
+  "resolution_criteria": "Check if BTC/USD price exceeded $100,000 at any point during December 2024.",
+  "research_timestamp": "2025-12-19T08:05:14.394349",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-3-flash-preview",
+      "strategy": "comprehensive",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 0.0006568431854248047,
+      "timestamp": "2025-12-19T08:05:14.393910",
+      "error": "The only string that can be passed as a tool is 'code_execution'."
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-3-flash-preview",
+      "strategy": "focused",
+      "outcome": "INVALID",
+      "confidence": 0.0,
+      "reasoning": "Research failed due to error",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 0.0004911422729492188,
+      "timestamp": "2025-12-19T08:05:14.394106",
+      "error": "The only string that can be passed as a tool is 'code_execution'."
+    }
+  ],
+  "consensus": {
+    "reached": false,
+    "outcome": "INVALID",
+    "confidence": 0.0,
+    "agreement_ratio": 0.0,
+    "weighted_ratio": 0.0,
+    "total_sources": 0,
+    "unique_sources": 0,
+    "source_overlap": 0.0,
+    "agent_count": 2,
+    "requires_human_review": true,
+    "reason": "Need 3+ agents, got 2"
+  },
+  "merged_sources": []
+}

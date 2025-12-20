@@ -1,0 +1,291 @@
+{
+  "version": "1.0.0",
+  "market_id": 104,
+  "question": "Did Bitcoin reach $100,000 in December 2024?",
+  "resolution_criteria": "Check if BTC/USD price exceeded $100,000 at any point during December 2024.",
+  "research_timestamp": "2025-12-19T08:10:17.646738",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-3-flash-preview",
+      "strategy": "comprehensive",
+      "outcome": "YES",
+      "confidence": 1.0,
+      "reasoning": "Bitcoin officially surpassed the $100,000 milestone for the first time in history on December 5, 2024. Multiple major financial news outlets and data providers, including Reuters, The Guardian, Bloomberg, and CBS News, reported that the price of Bitcoin (BTC/USD) broke the six-figure barrier during early trading hours on that day. The rally was largely attributed to market optimism following the U.S. presidential election and the nomination of crypto-friendly officials to regulatory positions. Following the initial breakthrough, Bitcoin reached an all-time high of approximately $103,000 to $104,000 on December 5, and subsequently reached even higher levels, such as $108,000, later in the month (around December 17, 2024).",
+      "sources": [
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHp6LLI8-iIAxcM4j56TMEFcvESj9DBHmJjy_HFr9khUyKIPNz1vr8mK7ufAJh4RRSFjDIupy2fwSFnkydhUoxExM_eVHCx0K-4cA4Q8BCwtBd9lhjHuR0Zxu7kyJVK0hu74YDnSrOxC0pagsBk3UjWY0D87bIPISQ1T1JxDE4=",
+          "title": "relai.app",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEgCz6xYfrluAannLTbADJNOf5y-g3bq6aEgmgjoWqYfvqYr3a0TKaGPSU1hcBYKc-GU21w4PoK0pSU2YsqInFYYuZEoAKj5-7OsKoku9GhS2U2uPJcdQD5EBpCPVA8TFD1dhoSmL4ggxSgJ0vejyjP",
+          "title": "binance.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZTqADTahwDs6yW-M9-vpHuc0bJ6H4f88fXyk4MoHpCLwvPf-MPpbjCB6uWX6LYR0K4PQiJqCkr-nV6Bg9muwgIs7r5ZEWdW3lzq-XqQhsEwap6KOf2yH94ljsu6PvQMP_FHd-PxSjp1sMKAUbNvanGJSo5puZgOOnEMblJB_W11wX3O-hMMvVt4ow8cPG1e5LOw==",
+          "title": "trendingtopics.eu",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEBRDMTsbvciVO7KqD5TUPAtyOBXPyDMqldV-hcw1FLjmUm3sX8ZpngcYWRkNKBoXJRNnxaBuwcDcEjicoTXwuk14AJhFjAkvGdQ1WnOZRVM6GpqYsKOdnTUwqwthibZNkdZt3fmkzR0VOQi4q5g_Laau_GaRqQyUTToRmTYLHOah_2NN0kgkYdCoY81F9uZgMcraics3P9wk6znFyj2jO6EDKrMvPXhO2cC242DFhnnezN-K15EKOonvYdynemphcgQBkY0-BrQyWESqNDb9oxDp6gH-iz7mJhhpWKytWa0NZDzQ5siS8Md1C1_X0KaQSTRdIUlAhv",
+          "title": "livemint.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGVt5a0HgaUpQL_d9JA4LQUkef8CcwG-QSryuueAxEiugt1sDjN34xQHOU0ZX41ulm36rvUdYebj6VmpZObq5ZD_nk8LAcwMHh4L14_pec48Wx5xP7gzJ1MKStKhUxzBBBcI-jn98Hnz6V6T0YOk3MZq0QdXSEBDgUbzshvweFLsZvm9H2GfwCaBjoOulWYbZm5",
+          "title": "cbsnews.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGU-1sWF_jiMA42w4qp6WykLUKLeXmFTID96_4sd26fFxh7mD7hCrfxh2xrQ3y7MJaDUqKMsp90j5dxnvuRWZlx6iL_IbwBLutySDgAFDkCG9y86E6AoGLsJ0IJkIeesfNapwhJh4dFwcYUo7u2F4ufUnIO5qrmwDrNmXBiuxpaMpiFZJ9bNA==",
+          "title": "investopedia.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEhxFtzcEmXtRKSOG2igztmzeTzjNfMCv_knJ1evs3SNnqoFk50mbXNfedYCLFZ--mciF6lYHnZYPy8wD8zHj3954Dd3xogH95wZ4xqyM9co2Aa7ZCWe3WIhQAU5OO0egzW6r4UeX-Prw1XFjgSnb-ohEF8I2UpgcJR2DFJT4wy7NnlkXceEARCNkTUgF8D",
+          "title": "theguardian.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEkMhwvOOhx9c2YfjQDKhvkQv7v4TyKnU6t5Tfi-1q7_2e5VJnA9_r8IK9_-jwOuO0mn3Q1F99jPmLHQW5a6n89qWkLrDB3O9KuOutXcWcIP9nfOJ_ntJiacP0rN-BdRj325Hnv940n3S8nov5nNJDd477hkjxnMAJcRDdivG6tGR8xConuVpvlMPQbixG-xD5e0ISXdTAHZ6La2qni0xpa0r8lIrFI59GFZt5supN8LVpjGtvklyDhLRD_UTWIPMVdwANc",
+          "title": "forbes.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQENEBA7j2FUa4ot0cb-wMtnTGbBA9UhVCTTwqqPYC66a7mRIl9KqFKVKEnnOQSbMYR8vEZTIlzIYVqh3VBkpUXYx2wjmxioolknu8hixMTq8yQ2GnV7Zy-rTOK5myrxjpYI_KMXVP5cRYFpSn8388iqeb5SmPmFp-q0QstZ-zZWQ2xFaO4jIEX7sw0NP6yzQBFiZ-6aks56dusd7jimpYf_VZJbjNo8KeSHs5g5wOEScogMIzC75FICRFs=",
+          "title": "indiatoday.in",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        }
+      ],
+      "source_count": 9,
+      "research_duration_seconds": 14.194097995758057,
+      "timestamp": "2025-12-19T08:10:14.547571",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-3-flash-preview",
+      "strategy": "focused",
+      "outcome": "YES",
+      "confidence": 1.0,
+      "reasoning": "Bitcoin officially crossed the $100,000 threshold for the first time on December 4, 2024, reaching an intraday high of approximately $103,000. It continued to rally throughout the month, hitting a peak of roughly $108,000 on December 17, 2024. This milestone was widely documented by global financial news organizations and market data providers.",
+      "sources": [
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFQufJCqdbd90pe-FJcaB5tyynoZ0KglypslRCOhlG87KstZyoXoWTNoZVNQtqWR2mC4HnIEwHwMypFoQ30wILZX-gQM5H4gmuxYnOA09Vqb3mNSgYwkAALl8duKu8BtSrg5kcvbnRuD9nWIkJzrHUz7MNMAQ==",
+          "title": "bankrate.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHXLb2eURiO9xB9gib5VBL0MI_7K2fuwKPjaKvRcbERrk2NNUo3grzXBywQpIxaBGcnuqbY_03MA44YaTaY-UkjZdYlCcrS9rSwGdXf7lAnMkfVdedXpW7oUceBmevDw9Ce14otSZgKiA4C9A==",
+          "title": "wikipedia.org",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH5Zp_yDPqggz2j1aQdLgOIy3zijXAEV164LghilegFEFINO_JQshbS4XkW5oT7V_nwk1b9mXa72tVoZQQWJn2yQ8mvipw_vNFQQuIpQ3qQgygH_UvNZOsE_IWk0IzyXFvIo2QquY68hI6Qut-6mud5zArJyxQm6J-y1EYnk1MUe0NNbgY_qrY8MdC4YN4dzyAC",
+          "title": "cbsnews.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFV1Ez_hL4Xii-uuoWG6zWjZYQOOaqjnmgT43OwuMhV1s75orG2fKs2B4Uojioyv3EnYSuM0-ktzeBe_oqjlhdyR_y_ogkzSO2M3uOTBf_WvGsiN8uqJ9G-IBKM1C-HLFBdjX4v160=",
+          "title": "youtube.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQF7mHs3A9B_cl4ACJRdk6sXHeWPFleBbp5muKhxRa9PlzPa-SHZIYTB982P3cpYubQ7ogjG2U2DMsFepVtoqYasU_wmSblITx8NdqJoae2OJFPa3Ew_UTOuyZCzZgMXWlc=",
+          "title": "wikipedia.org",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGyObt3T3tggii9puwAqzASaMxaTf-6c3QYFI9GrniiijRID0TbpV4vRZrWZ9IgOzqWksruGM9Vo9BHJMPuY2UepGX4btrf73VOuh6KqHu0RYN5mek2oKT_2l4vI9w8caCOMNEF6s6JwxLmrW7BoEpTWALnBhkfIaaJC-sNpQYJYUbqQlLwp_pXHlnUQ05z",
+          "title": "theguardian.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHZXxlqMHsuCLbysruEwhkklX6aDBISmaOjn-0yIE0z9k4UWwF1zowmiprZ0oa2rLCRdN1jouynr8AAKBkNym1Yhz7OEDaMHZRAHAHWcRCDqP9mLojZ9QOiakuO7mU=",
+          "title": "bitbo.io",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFJQA2QovotcbnlzIqGpzpZpXzYhaer8FCjxWgnre0brrLrC1U0QCO6-k0VhGMGaSi8GZ-1IMmf_i3aGU1qz41yt1mB8YVdQIR9cbIMr3TXOn_yekbxiRrXj-yyBdIlIPIB87Uqe0n6o4UnVpnVyPedqQm-4Ljbq5U2JCiQxXc=",
+          "title": "relai.app",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEYLUHuCBgjMI7s4ZNROe8XNctZgPhNBidyevF_ZrhgF4Bcin4MkG0U0etdcF_ZdjMwfcDHu5m_VT4-bLVPu-IHI-IqhZ5efelsPfGoW1PV7NldplVkVIM_6xQkNjB2F3r77Do7KrRUNzPYVkx3RNFsWE8P7fAz15f3AsElxcU6UjcZEFanVPIo",
+          "title": "investopedia.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGMBfqkeHWTF3FmF5084VEdbwg1L_A8hIl6hJ4qEbjNGMNAm1ubAtOuABJqhHDa8sJb1_vn7CN1j-dIG_RgBQJDnKvVuJlPs8BoaGBQD61XGJsj5SVIT6FVZvaFa0e0v0GhK46okhG56m_SoMuO5wa90EaIUMeBiHKNhsw1i-rc8aM0etcBv9zJ1ocWRWaU",
+          "title": "mexicobusiness.news",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEiWxu1rwUuQ5t80VSVJgX5zfpS8VOD8lTj9Qm2xSZ3JjhAFo8xGMijeTawO7P1QokyL-C8cuLUKpnZdO1uDrnQe9VdA8ejkL2Ak2phMwa2qG5q0ogBkS_GkRNEeeA5LvM7Rw-bmcLXo8zcu8ap_TICICm-Zdm4WFPY49b_noCEcguVbIuAA2IhpmRPRi_YW5NkoJvsx8_0qHjpuvl2PfE9uESGH46nxLtYTHWkpa8w-56Lmec96GICcBCorxqFItjvq9ZE",
+          "title": "forbes.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.8,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        }
+      ],
+      "source_count": 11,
+      "research_duration_seconds": 17.290688037872314,
+      "timestamp": "2025-12-19T08:10:17.645927",
+      "error": null
+    }
+  ],
+  "consensus": {
+    "reached": false,
+    "outcome": "INVALID",
+    "confidence": 0.0,
+    "agreement_ratio": 0.0,
+    "weighted_ratio": 0.0,
+    "total_sources": 0,
+    "unique_sources": 0,
+    "source_overlap": 0.0,
+    "agent_count": 2,
+    "requires_human_review": true,
+    "reason": "Only 1 valid results, need 2"
+  },
+  "merged_sources": []
+}

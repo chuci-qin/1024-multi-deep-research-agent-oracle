@@ -66,8 +66,10 @@ class AgentResult(BaseModel):
     @property
     def is_valid(self) -> bool:
         """Check if result meets minimum requirements."""
+        import os
+        min_sources = int(os.getenv("MIN_SOURCES_PER_AGENT", "3"))  # Configurable
         return (
-            len(self.sources) >= 50
+            len(self.sources) >= min_sources
             and self.error is None
             and self.outcome != Outcome.INVALID
         )
