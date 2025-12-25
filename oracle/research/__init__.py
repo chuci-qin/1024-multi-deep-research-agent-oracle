@@ -8,20 +8,20 @@ This module provides transparency and verifiability for the oracle's
 decision-making process.
 """
 
-from oracle.research.thinking_recorder import (
-    ThinkingStep,
-    ThinkingStepType,
-    ThinkingRecorder,
-)
-from oracle.research.website_tracker import (
-    WebsiteVisit,
-    WebsiteTracker,
-    CredibilityTier,
-)
 from oracle.research.reasoning_chain import (
+    ReasoningChain,
     ReasoningStep,
     ReasoningStepType,
-    ReasoningChain,
+)
+from oracle.research.thinking_recorder import (
+    ThinkingRecorder,
+    ThinkingStep,
+    ThinkingStepType,
+)
+from oracle.research.website_tracker import (
+    CredibilityTier,
+    WebsiteTracker,
+    WebsiteVisit,
 )
 
 __all__ = [
@@ -38,4 +38,3 @@ __all__ = [
     "ReasoningStepType",
     "ReasoningChain",
 ]
-

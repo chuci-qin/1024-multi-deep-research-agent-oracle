@@ -9,13 +9,13 @@ Components:
 - StrictConsensusEngine: Enhanced consensus with strict verification
 """
 
-from oracle.consensus.engine import ConsensusEngine, ConsensusConfig
+from oracle.consensus.engine import ConsensusConfig, ConsensusEngine
 from oracle.consensus.strict_engine import (
-    StrictConsensusEngine,
-    StrictConsensusConfig,
-    VerificationResult,
     DisagreementAnalysis,
     ProvableConsensusData,
+    StrictConsensusConfig,
+    StrictConsensusEngine,
+    VerificationResult,
 )
 
 __all__ = [

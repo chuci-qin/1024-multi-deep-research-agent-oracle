@@ -2,7 +2,7 @@
 REST API for Multi-Agent Oracle.
 """
 
-from oracle.api.server import create_app, OracleAPI
+from oracle.api.server import OracleAPI, create_app
 
 __all__ = [
     "create_app",

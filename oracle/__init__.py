@@ -14,28 +14,28 @@ Components:
 Version: 0.2.0 (Phase 2 LLM Oracle Core)
 """
 
-from oracle.core import MultiAgentOracle
 from oracle.agents import GeminiDeepResearchAgent, StrategyFactory, StrategyProfile
 from oracle.consensus import ConsensusEngine, StrictConsensusEngine
-from oracle.storage import (
-    IPFSStorage,
-    OracleResearchDataBuilder,
-    OracleConfigData,
-    OracleResearchData,
-)
+from oracle.core import MultiAgentOracle
 from oracle.models import (
+    AgentResult,
+    ConsensusResult,
     OracleRequest,
     OracleResult,
-    ConsensusResult,
     ResearchSource,
-    AgentResult,
 )
 
 # Import research module
 from oracle.research import (
+    ReasoningChain,
     ThinkingRecorder,
     WebsiteTracker,
-    ReasoningChain,
+)
+from oracle.storage import (
+    IPFSStorage,
+    OracleConfigData,
+    OracleResearchData,
+    OracleResearchDataBuilder,
 )
 
 __version__ = "0.2.0"

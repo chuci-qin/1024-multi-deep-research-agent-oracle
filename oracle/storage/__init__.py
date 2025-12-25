@@ -9,22 +9,22 @@ Components:
 - builder: Research data builder
 """
 
-from oracle.storage.ipfs import IPFSStorage, IPFSConfig
+from oracle.storage.builder import OracleResearchDataBuilder
 from oracle.storage.canonical import (
-    # Functions
-    to_canonical_json,
-    calculate_sha256,
-    calculate_data_hash,
-    verify_ipfs_data,
+    CanonicalJSONEncoder,
     # Classes
     HashableData,
     OracleConfigData,
     OracleResearchData,
     ResearchDataEntry,
     VerifiedData,
-    CanonicalJSONEncoder,
+    calculate_data_hash,
+    calculate_sha256,
+    # Functions
+    to_canonical_json,
+    verify_ipfs_data,
 )
-from oracle.storage.builder import OracleResearchDataBuilder
+from oracle.storage.ipfs import IPFSConfig, IPFSStorage
 
 __all__ = [
     # IPFS

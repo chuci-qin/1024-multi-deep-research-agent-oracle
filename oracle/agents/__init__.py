@@ -9,13 +9,13 @@ Components:
 - StrategyFactory: Factory for creating differentiated agent configurations
 """
 
-from oracle.agents.base import BaseAgent, SearchStrategy, AgentConfig
+from oracle.agents.base import AgentConfig, BaseAgent, SearchStrategy
 from oracle.agents.gemini import GeminiDeepResearchAgent
 from oracle.agents.strategies import (
-    StrategyProfile,
+    STRATEGY_CONFIGS,
     StrategyConfig,
     StrategyFactory,
-    STRATEGY_CONFIGS,
+    StrategyProfile,
 )
 
 __all__ = [

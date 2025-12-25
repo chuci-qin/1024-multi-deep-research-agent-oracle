@@ -30,7 +30,8 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        # Only install dev dependencies, not blockchain (anchorpy has pytest plugin conflicts)
+        run: uv sync --extra dev
 
       - name: Run Ruff linter
         run: uv run ruff check .
@@ -58,7 +59,8 @@ jobs:
         run: uv python install ${{ env.PYTHON_VERSION }}
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        # Only install dev dependencies, not blockchain (anchorpy has pytest plugin conflicts)
+        run: uv sync --extra dev
 
       - name: Run tests
         run: uv run pytest tests/ -v --tb=short
