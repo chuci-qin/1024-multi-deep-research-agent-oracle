@@ -1,0 +1,104 @@
+# =============================================================================
+# Docker Ignore - 1024 Multi-Agent Oracle
+# =============================================================================
+
+# Git
+.git/
+.gitignore
+
+# Python virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Linting
+.ruff_cache/
+
+# Local development
+.env
+.env.local
+*.local
+.local/
+
+# Keys (NEVER include in Docker image!)
+keys/
+*.json.key
+*.pem
+*.key
+
+# Documentation (not needed in runtime)
+docs/
+*.md
+!README.md
+
+# Examples and tests (not needed in production)
+examples/
+tests/
+
+# Mock data
+.ipfs_mock/
+
+# Logs
+logs/
+*.log
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# Misc
+*.bak
+*.tmp
+*.temp
+
+# GitHub Actions
+.github/
+
+# Contributing guide (not needed in runtime)
+CONTRIBUTING.md
+CODE_OF_CONDUCT.md
+

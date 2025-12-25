@@ -1,0 +1,120 @@
+# =============================================================================
+# Docker Build and Push Workflow
+# 
+# This workflow builds and pushes Docker images to:
+# 1. GitHub Container Registry (ghcr.io) - Free for open source
+# 2. Docker Hub (optional) - If secrets are configured
+#
+# Required Secrets:
+# - DOCKERHUB_USERNAME (optional): Docker Hub username
+# - DOCKERHUB_TOKEN (optional): Docker Hub access token
+# - DEPLOY_WEBHOOK_URL (optional): Webhook URL for deployment trigger
+# =============================================================================
+
+name: Docker Build and Push
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'  # Trigger on version tags like v1.0.0
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  # Image name for GitHub Container Registry
+  GHCR_IMAGE: ghcr.io/${{ github.repository_owner }}/1024-multi-agent-oracle
+  # Image name for Docker Hub
+  DOCKERHUB_IMAGE: chuciqin1/1024-multi-deep-research-agent-oracle
+
+jobs:
+  build-and-push:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write  # Required for pushing to GHCR
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login to GitHub Container Registry (always available for open source)
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Login to Docker Hub (optional, only if secrets are configured)
+      - name: Login to Docker Hub
+        if: ${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Generate Docker metadata (tags, labels)
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.GHCR_IMAGE }}
+            ${{ env.DOCKERHUB_IMAGE }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      # Build and push Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64  # Multi-arch support
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # Output image digest
+      - name: Output image digest
+        run: |
+          echo "### 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # Optional: Deploy to your infrastructure
+  deploy:
+    name: Deploy (Optional)
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' && secrets.DEPLOY_WEBHOOK_URL != '' }}
+
+    steps:
+      - name: Trigger deployment
+        run: |
+          echo "🚀 Triggering deployment..."
+          curl -X POST "${{ secrets.DEPLOY_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{"image": "${{ env.GHCR_IMAGE }}:latest", "sha": "${{ github.sha }}"}' \
+            --max-time 30 \
+            --retry 3 \
+            --retry-delay 5
+          echo "✅ Deployment triggered successfully"
+

@@ -10,6 +10,8 @@ This is the **AI Oracle** for the **1024 Prediction Market**. Instead of relying
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Gemini API](https://img.shields.io/badge/Gemini-Deep%20Research-4285F4.svg)](https://ai.google.dev/)
+[![CI](https://github.com/1024chain/1024-multi-deep-research-agent-oracle/actions/workflows/ci.yml/badge.svg)](https://github.com/1024chain/1024-multi-deep-research-agent-oracle/actions/workflows/ci.yml)
+[![Docker](https://github.com/1024chain/1024-multi-deep-research-agent-oracle/actions/workflows/docker.yml/badge.svg)](https://github.com/1024chain/1024-multi-deep-research-agent-oracle/actions/workflows/docker.yml)
 
 ## 🌟 Why AI Oracle for Prediction Markets?
 
@@ -66,6 +68,7 @@ Traditional prediction market oracles face a critical trust problem:
 ### Prerequisites
 
 - Python 3.11+
+- [uv](https://github.com/astral-sh/uv) (recommended) or pip
 - Google Gemini API Key ([Get one here](https://ai.google.dev/))
 - (Optional) OpenAI API Key for additional agent
 
@@ -76,17 +79,29 @@ Traditional prediction market oracles face a critical trust problem:
 git clone https://github.com/1024chain/1024-multi-deep-research-agent-oracle.git
 cd 1024-multi-deep-research-agent-oracle
 
+# Install uv (if not already installed)
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install dependencies (uv will auto-create .venv)
+uv sync
+
+# Configure API keys
+cp .env.example .env
+# Edit .env with your API keys
+```
+
+<details>
+<summary>Alternative: Using pip (not recommended)</summary>
+
+```bash
 # Create virtual environment
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install dependencies
 pip install -e .
-
-# Configure API keys
-cp .env.example .env
-# Edit .env with your API keys
 ```
+</details>
 
 ### Basic Usage
 
@@ -237,6 +252,63 @@ oracle resolve \
 │  └───────────────────────────────────────────────────────────────────────┘  │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
+```
+
+## 🐳 Docker
+
+### Quick Start with Docker
+
+```bash
+# Pull from Docker Hub
+docker pull chuciqin1/1024-multi-deep-research-agent-oracle:latest
+
+# Run with your API key
+docker run -d \
+  --name oracle \
+  -p 8989:8989 \
+  -e GEMINI_API_KEY=your_api_key \
+  chuciqin1/1024-multi-deep-research-agent-oracle:latest
+
+# Check logs
+docker logs -f oracle
+```
+
+### Build from Source
+
+```bash
+# Build the image
+docker build -t 1024-multi-agent-oracle .
+
+# Run locally
+docker run -d \
+  --name oracle \
+  -p 8989:8989 \
+  -e GEMINI_API_KEY=your_api_key \
+  -e LOG_LEVEL=DEBUG \
+  1024-multi-agent-oracle
+```
+
+### Docker Compose
+
+```yaml
+# docker-compose.yml
+version: '3.8'
+services:
+  oracle:
+    image: chuciqin1/1024-multi-deep-research-agent-oracle:latest
+    ports:
+      - "8989:8989"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MIN_AGENTS=3
+      - CONSENSUS_THRESHOLD=0.67
+      - LOG_LEVEL=INFO
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8989/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 ```
 
 ## 🔧 Configuration
@@ -404,14 +476,14 @@ We welcome contributions! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guideline
 # Development setup
 git clone https://github.com/1024chain/1024-multi-deep-research-agent-oracle.git
 cd 1024-multi-deep-research-agent-oracle
-pip install -e ".[dev]"
-pre-commit install
+uv sync --all-extras  # Install with dev dependencies
+uv run pre-commit install
 
 # Run tests
-pytest tests/
+uv run pytest tests/
 
 # Run linter
-ruff check .
+uv run ruff check .
 ```
 
 ## 📜 License
