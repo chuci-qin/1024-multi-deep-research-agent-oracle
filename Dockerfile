@@ -27,14 +27,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 # Copy dependency files first (for better caching)
-COPY pyproject.toml uv.lock ./
+# Note: README.md is needed by hatchling during build
+COPY pyproject.toml uv.lock README.md LICENSE ./
 
-# Sync dependencies (frozen to ensure reproducibility)
-RUN uv sync --frozen --no-dev
+# Sync dependencies only (don't install the project itself yet)
+# This is for better Docker layer caching
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Copy source code
 COPY oracle/ ./oracle/
-COPY README.md LICENSE ./
+
+# Now install the project (this is fast since dependencies are cached)
+RUN uv sync --frozen --no-dev
 
 # Expose port (default: 8989, matching .env.example)
 EXPOSE 8989
