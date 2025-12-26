@@ -2,9 +2,12 @@
 REST API Server for Multi-Agent Oracle.
 
 Provides HTTP endpoints for requesting oracle resolutions.
+
+API Version: v1 (Enhanced with full verification support)
 """
 
 import os
+import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 
@@ -26,25 +29,15 @@ logger = structlog.get_logger()
 
 
 # ============================================================================
-# Request/Response Models
+# Request/Response Models (v1 - Full Featured)
 # ============================================================================
 
 
 class ResolutionRequest(BaseModel):
-    """Request to resolve a prediction market question."""
-
-    market_id: int = Field(..., description="Prediction market ID")
-    question: str = Field(..., description="Question to resolve")
-    resolution_criteria: str = Field(..., description="Criteria for resolution")
-    deadline: str | None = Field(None, description="Resolution deadline")
-    callback_url: str | None = Field(None, description="Webhook callback URL")
-
-
-class EnhancedResolutionRequest(BaseModel):
     """
-    Enhanced request with oracle config reference.
-
-    Task 2.9.1-2.9.2 from IMPLEMENTATION-TRACKER.md
+    Request to resolve a prediction market question.
+    
+    Supports full verification with oracle config and on-chain hashes.
     """
 
     market_id: int = Field(..., description="Prediction market ID")
@@ -53,7 +46,7 @@ class EnhancedResolutionRequest(BaseModel):
     deadline: str | None = Field(None, description="Resolution deadline")
     callback_url: str | None = Field(None, description="Webhook callback URL")
 
-    # Enhanced fields for verifiability
+    # Oracle config for verifiability
     oracle_config_cid: str | None = Field(
         None, description="IPFS CID of pre-stored oracle configuration"
     )
@@ -73,29 +66,14 @@ class ResolutionResponse(BaseModel):
 
     request_id: str
     status: str  # processing, completed, failed
-    estimated_time_seconds: int = 120
+    estimated_time_seconds: int = 180
 
 
 class ResultResponse(BaseModel):
-    """Oracle result response."""
-
-    request_id: str
-    market_id: int
-    status: str
-    outcome: str | None = None
-    confidence: float | None = None
-    agreement_ratio: float | None = None
-    source_count: int | None = None
-    ipfs_cid: str | None = None
-    consensus_reached: bool | None = None
-    error: str | None = None
-
-
-class EnhancedResultResponse(BaseModel):
     """
-    Enhanced result response with full verification data.
-
-    Task 2.9.3-2.9.6 from IMPLEMENTATION-TRACKER.md
+    Oracle result response with full verification data.
+    
+    Includes all data needed for on-chain verification.
     """
 
     request_id: str
@@ -163,20 +141,20 @@ class ResultStore:
     """Simple in-memory result store."""
 
     def __init__(self):
-        self._results: dict[str, OracleResult] = {}
+        self._results: dict[str, ResultResponse] = {}
         self._status: dict[str, str] = {}
 
     def set_processing(self, request_id: str):
         self._status[request_id] = "processing"
 
-    def set_completed(self, request_id: str, result: OracleResult):
+    def set_completed(self, request_id: str, result: ResultResponse):
         self._results[request_id] = result
         self._status[request_id] = "completed"
 
     def set_failed(self, request_id: str, error: str):
         self._status[request_id] = f"failed: {error}"
 
-    def get(self, request_id: str) -> tuple[str, OracleResult | None]:
+    def get(self, request_id: str) -> tuple[str, ResultResponse | None]:
         status = self._status.get(request_id, "not_found")
         result = self._results.get(request_id)
         return status, result
@@ -193,14 +171,10 @@ class OracleAPI:
     def __init__(self):
         self.oracle: MultiAgentOracle | None = None
         self.result_store = ResultStore()
-        # Enhanced storage for v2
-        self.enhanced_requests: dict[str, EnhancedResolutionRequest] = {}
-        self.enhanced_results: dict[str, EnhancedResultResponse] = {}
+        self.requests: dict[str, ResolutionRequest] = {}
 
     async def initialize(self):
         """Initialize the oracle."""
-        import os
-
         num_agents = int(os.getenv("MIN_AGENTS", "5"))
 
         self.oracle = MultiAgentOracle(
@@ -236,7 +210,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="1024 Multi-Agent Deep Research Oracle",
         description="AI-powered decentralized oracle for prediction markets",
-        version="0.1.0",
+        version="1.0.0",
         lifespan=lifespan,
     )
 
@@ -251,7 +225,7 @@ def create_app() -> FastAPI:
     )
 
     # ========================================================================
-    # Endpoints
+    # Health & Info Endpoints
     # ========================================================================
 
     @app.get("/health", response_model=HealthResponse)
@@ -266,239 +240,13 @@ def create_app() -> FastAPI:
         oracle = api_instance.oracle
         return HealthResponse(
             status="healthy" if oracle else "initializing",
-            version="0.1.0",
+            version="1.0.0",
             timestamp=datetime.utcnow().isoformat(),
             agents_configured=oracle.config.num_agents if oracle else None,
             ipfs_enabled=oracle.config.enable_ipfs if oracle else None,
         )
 
-    @app.post("/api/v1/resolve", response_model=ResolutionResponse)
-    async def request_resolution(
-        request: ResolutionRequest,
-        background_tasks: BackgroundTasks,
-    ):
-        """
-        Request oracle resolution for a prediction market.
-
-        The resolution runs asynchronously. Poll /api/v1/result/{request_id}
-        for the result, or provide a callback_url for webhook notification.
-        """
-        if not api_instance.oracle:
-            raise HTTPException(status_code=503, detail="Oracle not initialized")
-
-        # Generate request ID
-        import uuid
-
-        request_id = f"req_{uuid.uuid4().hex[:12]}"
-
-        # Mark as processing
-        api_instance.result_store.set_processing(request_id)
-
-        # Run resolution in background
-        background_tasks.add_task(
-            _run_resolution,
-            request_id,
-            request,
-        )
-
-        return ResolutionResponse(
-            request_id=request_id,
-            status="processing",
-            estimated_time_seconds=120,
-        )
-
-    @app.get("/api/v1/result/{request_id}", response_model=ResultResponse)
-    async def get_result(request_id: str):
-        """Get the result of a resolution request."""
-        status, result = api_instance.result_store.get(request_id)
-
-        if status == "not_found":
-            raise HTTPException(status_code=404, detail="Request not found")
-
-        if status == "processing":
-            return ResultResponse(
-                request_id=request_id,
-                market_id=0,
-                status="processing",
-            )
-
-        if status.startswith("failed"):
-            return ResultResponse(
-                request_id=request_id,
-                market_id=0,
-                status="failed",
-                error=status.replace("failed: ", ""),
-            )
-
-        if result:
-            return ResultResponse(
-                request_id=request_id,
-                market_id=result.market_id,
-                status="completed",
-                outcome=result.consensus.outcome.value,
-                confidence=result.consensus.confidence,
-                agreement_ratio=result.consensus.agreement_ratio,
-                source_count=len(result.merged_sources),
-                ipfs_cid=result.ipfs_cid,
-                consensus_reached=result.consensus.reached,
-            )
-
-        raise HTTPException(status_code=500, detail="Unknown error")
-
-    @app.post("/api/v1/resolve/sync", response_model=ResultResponse)
-    async def resolve_sync(request: ResolutionRequest):
-        """
-        Synchronously resolve a prediction market question.
-
-        This endpoint blocks until resolution is complete.
-        Use /api/v1/resolve for async operation.
-        """
-        if not api_instance.oracle:
-            raise HTTPException(status_code=503, detail="Oracle not initialized")
-
-        try:
-            result = await api_instance.oracle.resolve(
-                question=request.question,
-                resolution_criteria=request.resolution_criteria,
-                market_id=request.market_id,
-                deadline=request.deadline,
-            )
-
-            return ResultResponse(
-                request_id=result.request_id,
-                market_id=result.market_id,
-                status="completed",
-                outcome=result.consensus.outcome.value,
-                confidence=result.consensus.confidence,
-                agreement_ratio=result.consensus.agreement_ratio,
-                source_count=len(result.merged_sources),
-                ipfs_cid=result.ipfs_cid,
-                consensus_reached=result.consensus.reached,
-            )
-        except Exception as e:
-            logger.error(f"Resolution failed: {e}")
-            raise HTTPException(status_code=500, detail=str(e)) from e
-
-    # ========================================================================
-    # Enhanced V2 Endpoints (Task 2.9)
-    # ========================================================================
-
-    @app.post("/api/v2/resolve", response_model=ResolutionResponse)
-    async def request_resolution_v2(
-        request: EnhancedResolutionRequest,
-        background_tasks: BackgroundTasks,
-    ):
-        """
-        Enhanced resolution request with oracle config verification.
-
-        Task 2.9.1-2.9.2: Support oracle_config_cid and oracle_config_hash.
-
-        The resolution runs asynchronously with enhanced verification.
-        Poll /api/v2/result/{request_id} for the enhanced result.
-        """
-        if not api_instance.oracle:
-            raise HTTPException(status_code=503, detail="Oracle not initialized")
-
-        # Generate request ID
-        import uuid
-
-        request_id = f"req_v2_{uuid.uuid4().hex[:12]}"
-
-        # Mark as processing
-        api_instance.result_store.set_processing(request_id)
-
-        # Store enhanced request info
-        api_instance.enhanced_requests[request_id] = request
-
-        # Run resolution in background
-        background_tasks.add_task(
-            _run_enhanced_resolution,
-            request_id,
-            request,
-        )
-
-        return ResolutionResponse(
-            request_id=request_id,
-            status="processing",
-            estimated_time_seconds=180,  # Enhanced takes longer
-        )
-
-    @app.get("/api/v2/result/{request_id}", response_model=EnhancedResultResponse)
-    async def get_enhanced_result(request_id: str):
-        """
-        Get enhanced result with full verification data.
-
-        Task 2.9.3-2.9.6: Return comprehensive result data.
-        """
-        status, result = api_instance.result_store.get(request_id)
-        enhanced_result = api_instance.enhanced_results.get(request_id)
-
-        if status == "not_found":
-            raise HTTPException(status_code=404, detail="Request not found")
-
-        if status == "processing":
-            return EnhancedResultResponse(
-                request_id=request_id,
-                market_id=0,
-                status="processing",
-            )
-
-        if status.startswith("failed"):
-            return EnhancedResultResponse(
-                request_id=request_id,
-                market_id=0,
-                status="failed",
-                error=status.replace("failed: ", ""),
-            )
-
-        if enhanced_result:
-            return enhanced_result
-
-        # Fallback to basic result
-        if result:
-            return EnhancedResultResponse(
-                request_id=request_id,
-                market_id=result.market_id,
-                status="completed",
-                outcome=result.consensus.outcome.value,
-                confidence=result.consensus.confidence,
-                agreement_ratio=result.consensus.agreement_ratio,
-                total_sources=len(result.merged_sources),
-                research_data_cid=result.ipfs_cid,
-                consensus_reached=result.consensus.reached,
-            )
-
-        raise HTTPException(status_code=500, detail="Unknown error")
-
-    @app.post("/api/v2/resolve/sync", response_model=EnhancedResultResponse)
-    async def resolve_sync_v2(request: EnhancedResolutionRequest):
-        """
-        Synchronous enhanced resolution with full verification.
-
-        This endpoint blocks until resolution is complete and returns
-        comprehensive verification data including hashes for on-chain submission.
-        """
-        if not api_instance.oracle:
-            raise HTTPException(status_code=503, detail="Oracle not initialized")
-
-        try:
-            import uuid
-
-            request_id = f"req_v2_{uuid.uuid4().hex[:12]}"
-
-            # Run enhanced resolution
-            enhanced_result = await _execute_enhanced_resolution(
-                request_id,
-                request,
-            )
-
-            return enhanced_result
-
-        except Exception as e:
-            logger.error(f"Enhanced resolution failed: {e}")
-            raise HTTPException(status_code=500, detail=str(e)) from e
-
-    @app.get("/api/v2/strategies")
+    @app.get("/api/v1/strategies")
     async def list_strategies():
         """
         List available agent strategies.
@@ -510,30 +258,131 @@ def create_app() -> FastAPI:
 
         return {
             "strategies": StrategyFactory.list_all_profiles(),
-            "recommended_5_agents": [p.value for p in StrategyFactory.get_recommended_profiles(5)],
+            "recommended_5_agents": [
+                p.value for p in StrategyFactory.get_recommended_profiles(5)
+            ],
         }
+
+    # ========================================================================
+    # Resolution Endpoints (v1 - Full Featured)
+    # ========================================================================
+
+    @app.post("/api/v1/resolve", response_model=ResolutionResponse)
+    async def request_resolution(
+        request: ResolutionRequest,
+        background_tasks: BackgroundTasks,
+    ):
+        """
+        Request oracle resolution for a prediction market.
+
+        The resolution runs asynchronously with full verification.
+        Poll /api/v1/result/{request_id} for the result,
+        or provide a callback_url for webhook notification.
+        
+        Supports:
+        - oracle_config_cid/hash for config verification
+        - Custom agent_count and consensus_threshold
+        - Full verification data in response
+        """
+        if not api_instance.oracle:
+            raise HTTPException(status_code=503, detail="Oracle not initialized")
+
+        request_id = f"req_{uuid.uuid4().hex[:12]}"
+
+        # Mark as processing
+        api_instance.result_store.set_processing(request_id)
+
+        # Store request info
+        api_instance.requests[request_id] = request
+
+        # Run resolution in background
+        background_tasks.add_task(
+            _run_resolution,
+            request_id,
+            request,
+        )
+
+        return ResolutionResponse(
+            request_id=request_id,
+            status="processing",
+            estimated_time_seconds=180,
+        )
+
+    @app.get("/api/v1/result/{request_id}", response_model=ResultResponse)
+    async def get_result(request_id: str):
+        """
+        Get the result of a resolution request.
+        
+        Returns full verification data including:
+        - Consensus details (outcome, confidence, agreement)
+        - Source statistics (tier1/tier2 sources)
+        - IPFS CIDs and hashes for on-chain verification
+        - Manual review flags if applicable
+        """
+        status, result = api_instance.result_store.get(request_id)
+
+        if status == "not_found":
+            raise HTTPException(status_code=404, detail="Request not found")
+
+        if status == "processing":
+            return ResultResponse(
+                request_id=request_id,
+                market_id=0,
+                status="processing",
+            )
+
+        if status.startswith("failed"):
+            return ResultResponse(
+                request_id=request_id,
+                market_id=0,
+                status="failed",
+                error=status.replace("failed: ", ""),
+            )
+
+        if result:
+            return result
+
+        raise HTTPException(status_code=500, detail="Unknown error")
+
+    @app.post("/api/v1/resolve/sync", response_model=ResultResponse)
+    async def resolve_sync(request: ResolutionRequest):
+        """
+        Synchronously resolve a prediction market question.
+
+        This endpoint blocks until resolution is complete and returns
+        comprehensive verification data including hashes for on-chain submission.
+        
+        Use /api/v1/resolve for async operation.
+        """
+        if not api_instance.oracle:
+            raise HTTPException(status_code=503, detail="Oracle not initialized")
+
+        try:
+            request_id = f"req_{uuid.uuid4().hex[:12]}"
+
+            # Run resolution
+            result = await _execute_resolution(
+                request_id,
+                request,
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Resolution failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e)) from e
 
     return app
 
 
 async def _run_resolution(request_id: str, request: ResolutionRequest):
-    """Background task to run resolution."""
+    """Background task for resolution."""
     try:
-        if not api_instance.oracle:
-            api_instance.result_store.set_failed(request_id, "Oracle not initialized")
-            return
-
-        result = await api_instance.oracle.resolve(
-            question=request.question,
-            resolution_criteria=request.resolution_criteria,
-            market_id=request.market_id,
-            deadline=request.deadline,
-        )
-
+        result = await _execute_resolution(request_id, request)
         api_instance.result_store.set_completed(request_id, result)
 
         # Send webhook if configured
-        if request.callback_url:
+        if request.callback_url and result.status == "completed":
             await _send_webhook(request.callback_url, result)
 
     except Exception as e:
@@ -541,73 +390,17 @@ async def _run_resolution(request_id: str, request: ResolutionRequest):
         api_instance.result_store.set_failed(request_id, str(e))
 
 
-async def _send_webhook(url: str, result: OracleResult):
-    """Send webhook notification."""
-    import httpx
-
-    try:
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                url,
-                json={
-                    "request_id": result.request_id,
-                    "market_id": result.market_id,
-                    "outcome": result.consensus.outcome.value,
-                    "confidence": result.consensus.confidence,
-                    "source_count": len(result.merged_sources),
-                    "ipfs_cid": result.ipfs_cid,
-                    "consensus_reached": result.consensus.reached,
-                },
-                timeout=10,
-            )
-        logger.info(f"Webhook sent to {url}")
-    except Exception as e:
-        logger.error(f"Webhook failed: {e}")
-
-
-async def _run_enhanced_resolution(
+async def _execute_resolution(
     request_id: str,
-    request: EnhancedResolutionRequest,
-):
-    """Background task for enhanced resolution."""
-    try:
-        enhanced_result = await _execute_enhanced_resolution(request_id, request)
-        api_instance.enhanced_results[request_id] = enhanced_result
-
-        # Also update basic result store
-        if enhanced_result.status == "completed":
-            api_instance.result_store._status[request_id] = "completed"
-        else:
-            api_instance.result_store._status[request_id] = f"failed: {enhanced_result.error}"
-
-        # Send webhook if configured
-        if request.callback_url and enhanced_result.status == "completed":
-            await _send_enhanced_webhook(request.callback_url, enhanced_result)
-
-    except Exception as e:
-        logger.error(f"Enhanced resolution failed: {e}")
-        api_instance.result_store.set_failed(request_id, str(e))
-        api_instance.enhanced_results[request_id] = EnhancedResultResponse(
-            request_id=request_id,
-            market_id=request.market_id,
-            status="failed",
-            error=str(e),
-        )
-
-
-async def _execute_enhanced_resolution(
-    request_id: str,
-    request: EnhancedResolutionRequest,
-) -> EnhancedResultResponse:
-    """Execute enhanced resolution with full verification data."""
+    request: ResolutionRequest,
+) -> ResultResponse:
+    """Execute resolution with full verification data."""
     from oracle.agents import StrategyFactory
     from oracle.consensus import StrictConsensusConfig, StrictConsensusEngine
-    from oracle.storage import (
-        OracleResearchDataBuilder,
-    )
+    from oracle.storage import OracleResearchDataBuilder
 
     if not api_instance.oracle:
-        return EnhancedResultResponse(
+        return ResultResponse(
             request_id=request_id,
             market_id=request.market_id,
             status="failed",
@@ -617,7 +410,7 @@ async def _execute_enhanced_resolution(
     research_started_at = datetime.utcnow().isoformat()
 
     try:
-        # Step 1: Run basic resolution
+        # Step 1: Run resolution
         result = await api_instance.oracle.resolve(
             question=request.question,
             resolution_criteria=request.resolution_criteria,
@@ -627,7 +420,7 @@ async def _execute_enhanced_resolution(
 
         research_completed_at = datetime.utcnow().isoformat()
 
-        # Step 2: Build enhanced data
+        # Step 2: Build research data
         builder = OracleResearchDataBuilder(
             market_id=request.market_id,
             question=request.question,
@@ -647,7 +440,9 @@ async def _execute_enhanced_resolution(
 
         # Build oracle config
         agent_count = request.agent_count or 5
-        strategies = [p.value for p in StrategyFactory.get_recommended_profiles(agent_count)]
+        strategies = [
+            p.value for p in StrategyFactory.get_recommended_profiles(agent_count)
+        ]
 
         oracle_config = builder.build_config(
             agent_count=agent_count,
@@ -669,10 +464,12 @@ async def _execute_enhanced_resolution(
             )
         )
 
-        strict_consensus, provable_data = strict_engine.calculate_strict(result.agent_results)
+        strict_consensus, provable_data = strict_engine.calculate_strict(
+            result.agent_results
+        )
 
-        # Step 4: Build enhanced response
-        return EnhancedResultResponse(
+        # Step 4: Build response
+        return ResultResponse(
             request_id=request_id,
             market_id=request.market_id,
             status="completed",
@@ -696,15 +493,19 @@ async def _execute_enhanced_resolution(
             requires_manual_review=(
                 strict_consensus.requires_human_review
                 or (
-                    provable_data.disagreement and provable_data.disagreement.requires_manual_review
+                    provable_data.disagreement
+                    and provable_data.disagreement.requires_manual_review
                 )
             ),
             review_reason=(
-                provable_data.disagreement.review_reason if provable_data.disagreement else None
+                provable_data.disagreement.review_reason
+                if provable_data.disagreement
+                else None
             ),
             disagreement_analysis=(
                 provable_data.disagreement.model_dump()
-                if provable_data.disagreement and provable_data.disagreement.has_disagreement
+                if provable_data.disagreement
+                and provable_data.disagreement.has_disagreement
                 else None
             ),
             research_started_at=research_started_at,
@@ -712,8 +513,8 @@ async def _execute_enhanced_resolution(
         )
 
     except Exception as e:
-        logger.error(f"Enhanced resolution execution failed: {e}")
-        return EnhancedResultResponse(
+        logger.error(f"Resolution execution failed: {e}")
+        return ResultResponse(
             request_id=request_id,
             market_id=request.market_id,
             status="failed",
@@ -721,8 +522,8 @@ async def _execute_enhanced_resolution(
         )
 
 
-async def _send_enhanced_webhook(url: str, result: EnhancedResultResponse):
-    """Send enhanced webhook notification."""
+async def _send_webhook(url: str, result: ResultResponse):
+    """Send webhook notification."""
     import httpx
 
     try:
@@ -732,9 +533,9 @@ async def _send_enhanced_webhook(url: str, result: EnhancedResultResponse):
                 json=result.model_dump(),
                 timeout=10,
             )
-        logger.info(f"Enhanced webhook sent to {url}")
+        logger.info(f"Webhook sent to {url}")
     except Exception as e:
-        logger.error(f"Enhanced webhook failed: {e}")
+        logger.error(f"Webhook failed: {e}")
 
 
 # Create global app instance for uvicorn
@@ -743,7 +544,6 @@ app = create_app()
 
 def run_server(host: str = None, port: int = None):
     """Run the API server."""
-    # Load from environment variables if not provided
     from dotenv import load_dotenv
 
     load_dotenv()

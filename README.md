@@ -61,7 +61,7 @@ Traditional prediction market oracles face a critical trust problem:
 | 🗳️ **Strict Consensus** | Unanimous agreement (100%) or 2/3+ supermajority |
 | 📦 **IPFS Storage** | All research stored on IPFS via Storacha for transparency |
 | ⛓️ **On-Chain** | Results submitted to 1024Chain with IPFS proof + SHA256 hash |
-| 🔄 **V2 API** | Enhanced endpoints with oracle config verification |
+| 🔄 **V1 API** | Full-featured endpoints with oracle config verification |
 | 🛡️ **Challenge Period** | Users can challenge results with evidence |
 
 ## 🚀 Quick Start
@@ -158,17 +158,17 @@ print(f"SHA256 Hash: {result.research_data_hash}")
 
 ## 🌐 API Endpoints
 
-### V2 API (Recommended)
+### V1 API (Full Featured)
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
-| `/api/v2/resolve` | POST | Start async resolution with config verification |
-| `/api/v2/resolve/sync` | POST | Synchronous resolution (blocking) |
-| `/api/v2/result/{request_id}` | GET | Get resolution result |
-| `/api/v2/strategies` | GET | List available research strategies |
+| `/api/v1/resolve` | POST | Start async resolution with config verification |
+| `/api/v1/resolve/sync` | POST | Synchronous resolution (blocking) |
+| `/api/v1/result/{request_id}` | GET | Get resolution result |
+| `/api/v1/strategies` | GET | List available research strategies |
 
-### V2 Request Format
+### Request Format
 
 ```json
 {
@@ -180,7 +180,7 @@ print(f"SHA256 Hash: {result.research_data_hash}")
 }
 ```
 
-### V2 Response Format
+### Response Format
 
 ```json
 {
@@ -343,7 +343,7 @@ DEBUG=false
 │                    1024 Multi-Agent Deep Research Oracle                    │
 │                                                                             │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                     Oracle Request (V2)                               │  │
+│  │                     Oracle Request (V1)                               │  │
 │  │  {                                                                    │  │
 │  │    "market_id": "market_123",                                        │  │
 │  │    "question": "Did X happen?",                                      │  │
@@ -522,7 +522,7 @@ All research is stored on IPFS for full transparency:
 - [x] **v0.2** - Gemini Deep Research agent implementation
 - [x] **v0.3** - Strict Consensus engine with multi-round support
 - [x] **v0.4** - IPFS storage integration (Storacha)
-- [x] **v0.5** - V2 API with config verification
+- [x] **v0.5** - API with config verification (consolidated as V1)
 - [x] **v0.6** - Docker & CI/CD pipeline
 - [ ] **v0.7** - Challenge & dispute resolution
 - [ ] **v1.0** - Production release
