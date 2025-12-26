@@ -45,7 +45,7 @@ class ResolutionRequest(BaseModel):
     resolution_criteria: str = Field(..., description="Criteria for resolution")
     deadline: str | None = Field(None, description="Resolution deadline")
     callback_url: str | None = Field(None, description="Webhook callback URL")
-
+    
     # Oracle config for verifiability
     oracle_config_cid: str | None = Field(
         None, description="IPFS CID of pre-stored oracle configuration"
@@ -53,7 +53,7 @@ class ResolutionRequest(BaseModel):
     oracle_config_hash: str | None = Field(
         None, description="SHA256 hash of oracle configuration for verification"
     )
-
+    
     # Agent configuration (optional, defaults to standard)
     agent_count: int | None = Field(None, description="Number of agents (default: 5)")
     consensus_threshold: float | None = Field(
@@ -79,44 +79,44 @@ class ResultResponse(BaseModel):
     request_id: str
     market_id: int
     status: str  # processing, completed, failed
-
+    
     # Core result
     outcome: str | None = None
     confidence: float | None = None
     agreement_ratio: float | None = None
     weighted_ratio: float | None = None
-
+    
     # Consensus status
     consensus_reached: bool | None = None
     agent_count: int | None = None
     valid_agent_count: int | None = None
-
+    
     # Source statistics
     total_sources: int | None = None
     unique_sources: int | None = None
     tier1_sources: int | None = None
     tier2_sources: int | None = None
-
+    
     # IPFS references with hashes (for on-chain verification)
     oracle_config_cid: str | None = None
     oracle_config_hash: str | None = None
     research_data_cid: str | None = None
     research_data_hash: str | None = None
-
+    
     # Verification status
     verification_passed: bool | None = None
     verification_issues: list[str] | None = None
-
+    
     # Manual review flags
     requires_manual_review: bool | None = None
     review_reason: str | None = None
-
+    
     # Disagreement analysis (if applicable)
     disagreement_analysis: dict | None = None
-
+    
     # Error info
     error: str | None = None
-
+    
     # Timestamps
     research_started_at: str | None = None
     research_completed_at: str | None = None
@@ -139,21 +139,21 @@ class HealthResponse(BaseModel):
 
 class ResultStore:
     """Simple in-memory result store."""
-
+    
     def __init__(self):
         self._results: dict[str, ResultResponse] = {}
         self._status: dict[str, str] = {}
-
+    
     def set_processing(self, request_id: str):
         self._status[request_id] = "processing"
-
+    
     def set_completed(self, request_id: str, result: ResultResponse):
         self._results[request_id] = result
         self._status[request_id] = "completed"
-
+    
     def set_failed(self, request_id: str, error: str):
         self._status[request_id] = f"failed: {error}"
-
+    
     def get(self, request_id: str) -> tuple[str, ResultResponse | None]:
         status = self._status.get(request_id, "not_found")
         result = self._results.get(request_id)
@@ -167,16 +167,16 @@ class ResultStore:
 
 class OracleAPI:
     """Oracle API application."""
-
+    
     def __init__(self):
         self.oracle: MultiAgentOracle | None = None
         self.result_store = ResultStore()
         self.requests: dict[str, ResolutionRequest] = {}
-
+    
     async def initialize(self):
         """Initialize the oracle."""
         num_agents = int(os.getenv("MIN_AGENTS", "5"))
-
+        
         self.oracle = MultiAgentOracle(
             config=OracleConfig(
                 num_agents=num_agents,
@@ -184,7 +184,7 @@ class OracleAPI:
             )
         )
         logger.info("Oracle API initialized", num_agents=num_agents)
-
+    
     async def shutdown(self):
         """Shutdown the oracle."""
         if self.oracle:
@@ -206,14 +206,14 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Create the FastAPI application."""
-
+    
     app = FastAPI(
         title="1024 Multi-Agent Deep Research Oracle",
         description="AI-powered decentralized oracle for prediction markets",
         version="1.0.0",
         lifespan=lifespan,
     )
-
+    
     # CORS
     cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
     app.add_middleware(
@@ -223,11 +223,11 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-
+    
     # ========================================================================
     # Health & Info Endpoints
     # ========================================================================
-
+    
     @app.get("/health", response_model=HealthResponse)
     async def health_check():
         """
@@ -266,7 +266,7 @@ def create_app() -> FastAPI:
     # ========================================================================
     # Resolution Endpoints (v1 - Full Featured)
     # ========================================================================
-
+    
     @app.post("/api/v1/resolve", response_model=ResolutionResponse)
     async def request_resolution(
         request: ResolutionRequest,
@@ -274,7 +274,7 @@ def create_app() -> FastAPI:
     ):
         """
         Request oracle resolution for a prediction market.
-
+        
         The resolution runs asynchronously with full verification.
         Poll /api/v1/result/{request_id} for the result,
         or provide a callback_url for webhook notification.
@@ -286,28 +286,28 @@ def create_app() -> FastAPI:
         """
         if not api_instance.oracle:
             raise HTTPException(status_code=503, detail="Oracle not initialized")
-
+        
         request_id = f"req_{uuid.uuid4().hex[:12]}"
-
+        
         # Mark as processing
         api_instance.result_store.set_processing(request_id)
 
         # Store request info
         api_instance.requests[request_id] = request
-
+        
         # Run resolution in background
         background_tasks.add_task(
             _run_resolution,
             request_id,
             request,
         )
-
+        
         return ResolutionResponse(
             request_id=request_id,
             status="processing",
             estimated_time_seconds=180,
         )
-
+    
     @app.get("/api/v1/result/{request_id}", response_model=ResultResponse)
     async def get_result(request_id: str):
         """
@@ -320,17 +320,17 @@ def create_app() -> FastAPI:
         - Manual review flags if applicable
         """
         status, result = api_instance.result_store.get(request_id)
-
+        
         if status == "not_found":
             raise HTTPException(status_code=404, detail="Request not found")
-
+        
         if status == "processing":
             return ResultResponse(
                 request_id=request_id,
                 market_id=0,
                 status="processing",
             )
-
+        
         if status.startswith("failed"):
             return ResultResponse(
                 request_id=request_id,
@@ -338,17 +338,17 @@ def create_app() -> FastAPI:
                 status="failed",
                 error=status.replace("failed: ", ""),
             )
-
+        
         if result:
             return result
-
+        
         raise HTTPException(status_code=500, detail="Unknown error")
-
+    
     @app.post("/api/v1/resolve/sync", response_model=ResultResponse)
     async def resolve_sync(request: ResolutionRequest):
         """
         Synchronously resolve a prediction market question.
-
+        
         This endpoint blocks until resolution is complete and returns
         comprehensive verification data including hashes for on-chain submission.
         
@@ -356,22 +356,22 @@ def create_app() -> FastAPI:
         """
         if not api_instance.oracle:
             raise HTTPException(status_code=503, detail="Oracle not initialized")
-
+        
         try:
             request_id = f"req_{uuid.uuid4().hex[:12]}"
-
+            
             # Run resolution
             result = await _execute_resolution(
                 request_id,
                 request,
             )
-
+            
             return result
-
+            
         except Exception as e:
             logger.error(f"Resolution failed: {e}")
             raise HTTPException(status_code=500, detail=str(e)) from e
-
+    
     return app
 
 
@@ -380,11 +380,11 @@ async def _run_resolution(request_id: str, request: ResolutionRequest):
     try:
         result = await _execute_resolution(request_id, request)
         api_instance.result_store.set_completed(request_id, result)
-
+        
         # Send webhook if configured
         if request.callback_url and result.status == "completed":
             await _send_webhook(request.callback_url, result)
-
+        
     except Exception as e:
         logger.error(f"Resolution failed: {e}")
         api_instance.result_store.set_failed(request_id, str(e))
@@ -398,7 +398,7 @@ async def _execute_resolution(
     from oracle.agents import StrategyFactory
     from oracle.consensus import StrictConsensusConfig, StrictConsensusEngine
     from oracle.storage import OracleResearchDataBuilder
-
+    
     if not api_instance.oracle:
         return ResultResponse(
             request_id=request_id,
@@ -406,9 +406,9 @@ async def _execute_resolution(
             status="failed",
             error="Oracle not initialized",
         )
-
+    
     research_started_at = datetime.utcnow().isoformat()
-
+    
     try:
         # Step 1: Run resolution
         result = await api_instance.oracle.resolve(
@@ -417,9 +417,9 @@ async def _execute_resolution(
             market_id=request.market_id,
             deadline=request.deadline,
         )
-
+        
         research_completed_at = datetime.utcnow().isoformat()
-
+        
         # Step 2: Build research data
         builder = OracleResearchDataBuilder(
             market_id=request.market_id,
@@ -429,45 +429,45 @@ async def _execute_resolution(
         )
         builder.research_started_at = research_started_at
         builder.research_completed_at = research_completed_at
-
+        
         # Add agent results
         for agent_result in result.agent_results:
             builder.add_agent_result(agent_result)
-
+        
         # Set consensus
         builder.set_consensus(result.consensus)
         builder.set_merged_sources(result.merged_sources)
-
+        
         # Build oracle config
         agent_count = request.agent_count or 5
         strategies = [
             p.value for p in StrategyFactory.get_recommended_profiles(agent_count)
         ]
-
+        
         oracle_config = builder.build_config(
             agent_count=agent_count,
             agent_strategies=strategies,
             consensus_threshold=request.consensus_threshold or 0.67,
         )
-
+        
         # Calculate hashes
         _, config_hash = oracle_config.get_hash_data()
-
+        
         # Build research data
         research_data = builder.build()
         _, research_hash = research_data.get_hash_data()
-
+        
         # Step 3: Run strict consensus check
         strict_engine = StrictConsensusEngine(
             config=StrictConsensusConfig(
                 threshold=request.consensus_threshold or 0.67,
             )
         )
-
+        
         strict_consensus, provable_data = strict_engine.calculate_strict(
             result.agent_results
         )
-
+        
         # Step 4: Build response
         return ResultResponse(
             request_id=request_id,
@@ -511,7 +511,7 @@ async def _execute_resolution(
             research_started_at=research_started_at,
             research_completed_at=research_completed_at,
         )
-
+        
     except Exception as e:
         logger.error(f"Resolution execution failed: {e}")
         return ResultResponse(
@@ -525,7 +525,7 @@ async def _execute_resolution(
 async def _send_webhook(url: str, result: ResultResponse):
     """Send webhook notification."""
     import httpx
-
+    
     try:
         async with httpx.AsyncClient() as client:
             await client.post(
@@ -547,12 +547,12 @@ def run_server(host: str = None, port: int = None):
     from dotenv import load_dotenv
 
     load_dotenv()
-
+    
     if host is None:
         host = os.getenv("API_HOST", "0.0.0.0")
     if port is None:
         port = int(os.getenv("API_PORT", "8989"))
-
+    
     logger.info("Starting Oracle API server", host=host, port=port)
     uvicorn.run(app, host=host, port=port)
 

@@ -318,9 +318,9 @@ class StrictConsensusEngine(ConsensusEngine):
             self.strict_config.require_source_diversity
             and len(categories) < self.strict_config.min_source_categories
         ):
-            warnings.append(
-                f"Limited source diversity: {len(categories)}/{self.strict_config.min_source_categories} categories"
-            )
+                warnings.append(
+                    f"Limited source diversity: {len(categories)}/{self.strict_config.min_source_categories} categories"
+                )
 
         # Cross-verification check (simplified)
         # Count sources cited by multiple agents
@@ -335,9 +335,9 @@ class StrictConsensusEngine(ConsensusEngine):
             self.strict_config.require_cross_verification
             and cross_verified < self.strict_config.min_cross_verified_facts
         ):
-            warnings.append(
-                f"Limited cross-verification: {cross_verified}/{self.strict_config.min_cross_verified_facts} facts"
-            )
+                warnings.append(
+                    f"Limited cross-verification: {cross_verified}/{self.strict_config.min_cross_verified_facts} facts"
+                )
 
         return VerificationResult(
             passed=passed,
