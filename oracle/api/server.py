@@ -133,6 +133,60 @@ class HealthResponse(BaseModel):
 
 
 # ============================================================================
+# Oracle Config Request/Response Models (Phase A - 2026-01-09)
+# ============================================================================
+
+
+class UploadConfigRequest(BaseModel):
+    """Request to upload oracle configuration to IPFS."""
+
+    market_id: int = Field(..., description="Prediction market ID")
+    question: str = Field(..., description="Market question")
+    resolution_criteria: str = Field(..., description="Resolution criteria text")
+    resolution_deadline: str | None = Field(None, description="Deadline ISO8601")
+
+    # LLM configuration
+    llm_config: dict | None = Field(
+        default=None,
+        description="LLM configuration (model, agent_count, threshold)"
+    )
+
+    # Source requirements
+    trusted_sources: list[str] = Field(
+        default_factory=list,
+        description="List of trusted sources for verification"
+    )
+
+    # Agent configuration
+    agent_strategies: list[str] | None = Field(
+        None, description="Agent strategy names"
+    )
+
+
+class UploadConfigResponse(BaseModel):
+    """Response for config upload request."""
+
+    success: bool
+    market_id: int
+    config_cid: str = Field(default="", description="IPFS CID of uploaded config")
+    config_hash: str = Field(default="", description="SHA256 hash of canonical JSON")
+    gateway_url: str | None = Field(None, description="IPFS gateway URL")
+    error: str | None = None
+
+
+class GetConfigResponse(BaseModel):
+    """Response for config retrieval."""
+
+    success: bool
+    cid: str
+    config: dict | None = None
+    verified: bool = False
+    expected_hash: str | None = None
+    actual_hash: str | None = None
+    error: str | None = None
+
+
+# ============================================================================
 # In-Memory Result Store (for demo - use Redis/DB in production)
 # ============================================================================
 
@@ -245,6 +299,147 @@ def create_app() -> FastAPI:
             agents_configured=oracle.config.num_agents if oracle else None,
             ipfs_enabled=oracle.config.enable_ipfs if oracle else None,
         )
+
+    # ========================================================================
+    # Oracle Config Endpoints (Phase A - 2026-01-09)
+    # ========================================================================
+
+    @app.post("/api/v1/config/upload", response_model=UploadConfigResponse)
+    async def upload_oracle_config(request: UploadConfigRequest):
+        """
+        Upload oracle configuration to IPFS.
+
+        This endpoint:
+        1. Builds an OracleConfigData structure
+        2. Converts to canonical JSON (RFC 8785)
+        3. Calculates SHA256 hash
+        4. Uploads to IPFS
+        5. Returns CID and hash for on-chain storage
+        """
+        from oracle.storage import OracleConfigData, IPFSStorage
+        from oracle.agents.strategies import StrategyFactory
+
+        try:
+            # Build agent strategies
+            agent_count = 5
+            if request.llm_config and "agent_count" in request.llm_config:
+                agent_count = request.llm_config.get("agent_count", 5)
+            
+            strategies = request.agent_strategies
+            if not strategies:
+                strategies = [
+                    p.value for p in StrategyFactory.get_recommended_profiles(agent_count)
+                ]
+
+            consensus_threshold = 0.67
+            if request.llm_config and "consensus_threshold" in request.llm_config:
+                consensus_threshold = request.llm_config.get("consensus_threshold", 0.67)
+
+            # Build config data
+            config = OracleConfigData(
+                version="1.0.0",
+                market_id=request.market_id,
+                question=request.question,
+                resolution_criteria=request.resolution_criteria,
+                deadline=request.resolution_deadline,
+                created_at=datetime.utcnow().isoformat(),
+                agent_count=agent_count,
+                agent_strategies=strategies,
+                consensus_threshold=consensus_threshold,
+                min_sources_per_agent=3,
+                min_source_categories=2,
+                require_tier1_sources=True,
+                min_tier1_count=2,
+                min_tier2_count=3,
+                metadata={
+                    "trusted_sources": request.trusted_sources,
+                }
+            )
+
+            # Get canonical JSON and hash
+            canonical_json, config_hash = config.get_hash_data()
+
+            # Upload to IPFS
+            ipfs = IPFSStorage()
+            cid = await ipfs.store_config(
+                config,
+                f"oracle-config-{request.market_id}.json"
+            )
+
+            gateway_url = ipfs.get_gateway_url(cid) if cid else None
+
+            logger.info(
+                f"Uploaded oracle config for market {request.market_id}",
+                cid=cid,
+                hash=config_hash[:16] + "...",
+            )
+
+            return UploadConfigResponse(
+                success=True,
+                market_id=request.market_id,
+                config_cid=cid or "",
+                config_hash=config_hash,
+                gateway_url=gateway_url,
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to upload oracle config: {e}")
+            return UploadConfigResponse(
+                success=False,
+                market_id=request.market_id,
+                config_cid="",
+                config_hash="",
+                error=str(e),
+            )
+
+    @app.get("/api/v1/config/{cid}", response_model=GetConfigResponse)
+    async def get_oracle_config(cid: str, expected_hash: str | None = None):
+        """
+        Get oracle configuration from IPFS and optionally verify its hash.
+
+        Args:
+            cid: IPFS CID of the config
+            expected_hash: Optional SHA256 hash to verify against
+        """
+        from oracle.storage import IPFSStorage, to_canonical_json, calculate_sha256
+
+        try:
+            # Fetch from IPFS
+            ipfs = IPFSStorage()
+            config_data = await ipfs.fetch(cid)
+
+            if config_data is None:
+                return GetConfigResponse(
+                    success=False,
+                    cid=cid,
+                    error="Config not found on IPFS",
+                )
+
+            # Calculate hash
+            canonical_json = to_canonical_json(config_data)
+            actual_hash = calculate_sha256(canonical_json)
+
+            # Verify if expected hash provided
+            verified = True
+            if expected_hash:
+                verified = actual_hash == expected_hash
+
+            return GetConfigResponse(
+                success=True,
+                cid=cid,
+                config=config_data,
+                verified=verified,
+                expected_hash=expected_hash,
+                actual_hash=actual_hash,
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to fetch oracle config: {e}")
+            return GetConfigResponse(
+                success=False,
+                cid=cid,
+                error=str(e),
+            )
 
     @app.get("/api/v1/strategies")
     async def list_strategies():
