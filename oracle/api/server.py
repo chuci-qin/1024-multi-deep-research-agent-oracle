@@ -9,7 +9,7 @@ API Version: v1 (Enhanced with full verification support)
 import os
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Load environment variables early
 from dotenv import load_dotenv
@@ -18,8 +18,9 @@ load_dotenv()
 
 import structlog
 import uvicorn
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Security
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
 from oracle.core import MultiAgentOracle, OracleConfig
@@ -120,6 +121,9 @@ class ResultResponse(BaseModel):
     # Timestamps
     research_started_at: str | None = None
     research_completed_at: str | None = None
+    
+    # IPFS storage indicator (false = real IPFS, true = local mock storage)
+    ipfs_mock: bool = False
 
 
 class HealthResponse(BaseModel):
@@ -268,14 +272,26 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
     
-    # CORS
-    cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+    # API Key authentication
+    # Set ORACLE_API_KEY env var to enable. If not set, authentication is disabled.
+    api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+    oracle_api_key = os.getenv("ORACLE_API_KEY")
+    
+    async def verify_api_key(api_key: str | None = Security(api_key_header)):
+        """Verify API key for protected endpoints."""
+        if not oracle_api_key:
+            return  # No key configured = auth disabled (dev mode)
+        if api_key != oracle_api_key:
+            raise HTTPException(status_code=403, detail="Invalid or missing API key")
+    
+    # CORS — restrict in production
+    cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8082").split(",")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins,
+        allow_origins=[o.strip() for o in cors_origins],
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type", "X-API-Key"],
     )
     
     # ========================================================================
@@ -462,7 +478,7 @@ def create_app() -> FastAPI:
     # Resolution Endpoints (v1 - Full Featured)
     # ========================================================================
     
-    @app.post("/api/v1/resolve", response_model=ResolutionResponse)
+    @app.post("/api/v1/resolve", response_model=ResolutionResponse, dependencies=[Depends(verify_api_key)])
     async def request_resolution(
         request: ResolutionRequest,
         background_tasks: BackgroundTasks,
@@ -539,7 +555,7 @@ def create_app() -> FastAPI:
         
         raise HTTPException(status_code=500, detail="Unknown error")
     
-    @app.post("/api/v1/resolve/sync", response_model=ResultResponse)
+    @app.post("/api/v1/resolve/sync", response_model=ResultResponse, dependencies=[Depends(verify_api_key)])
     async def resolve_sync(request: ResolutionRequest):
         """
         Synchronously resolve a prediction market question.
@@ -602,7 +618,9 @@ async def _execute_resolution(
             error="Oracle not initialized",
         )
     
-    research_started_at = datetime.utcnow().isoformat()
+    # Use timezone-aware UTC timestamps for RFC 3339 compliance
+    # (Rust backend parses with DateTime::parse_from_rfc3339 which requires timezone)
+    research_started_at = datetime.now(timezone.utc).isoformat()
     
     try:
         # Step 1: Run resolution
@@ -613,7 +631,7 @@ async def _execute_resolution(
             deadline=request.deadline,
         )
         
-        research_completed_at = datetime.utcnow().isoformat()
+        research_completed_at = datetime.now(timezone.utc).isoformat()
         
         # Step 2: Build research data
         builder = OracleResearchDataBuilder(
@@ -648,7 +666,13 @@ async def _execute_resolution(
         # Calculate hashes
         _, config_hash = oracle_config.get_hash_data()
         
-        # Build research data
+        # Build research data and compute hash
+        # NOTE: research_data_hash is computed from OracleResearchData (canonical schema),
+        # while research_data_cid points to IPFSResearchData (which may have additional fields
+        # like thinking_process, website_tracking). These are DIFFERENT data structures.
+        # The hash verifies the canonical research summary; the CID provides access to the
+        # full detailed data. This is by design — the hash is for DB integrity verification,
+        # while the CID is for data retrieval.
         research_data = builder.build()
         _, research_hash = research_data.get_hash_data()
         
@@ -705,6 +729,12 @@ async def _execute_resolution(
             ),
             research_started_at=research_started_at,
             research_completed_at=research_completed_at,
+            # Detect mock IPFS: mock CIDs are locally generated SHA256 hashes
+            ipfs_mock=(
+                result.ipfs_cid is None 
+                or not result.ipfs_cid 
+                or os.path.exists(os.path.join(os.getcwd(), ".ipfs_mock", f"{result.ipfs_cid}.json"))
+            ),
         )
         
     except Exception as e:

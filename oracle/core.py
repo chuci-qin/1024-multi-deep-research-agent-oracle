@@ -99,7 +99,8 @@ class MultiAgentOracle:
         """Create default set of Gemini agents with different strategies."""
         import os
 
-        strategies = [
+        # Strategies cycle for any number of agents
+        base_strategies = [
             SearchStrategy.COMPREHENSIVE,
             SearchStrategy.FOCUSED,
             SearchStrategy.DIVERSE,
@@ -112,7 +113,9 @@ class MultiAgentOracle:
         num_agents = int(os.getenv("MIN_AGENTS", str(self.config.num_agents)))
 
         agents = []
-        for i, strategy in enumerate(strategies[:num_agents]):
+        for i in range(num_agents):
+            # Cycle through strategies if num_agents > len(base_strategies)
+            strategy = base_strategies[i % len(base_strategies)]
             agent = GeminiDeepResearchAgent(
                 agent_id=f"gemini-agent-{i + 1}",
                 strategy=strategy,

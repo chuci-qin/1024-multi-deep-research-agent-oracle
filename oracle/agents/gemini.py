@@ -252,7 +252,7 @@ If the evidence is unclear or contradictory, use "UNDETERMINED".
                                 title=title,
                                 snippet="",
                                 category=self._categorize_url(url),
-                                credibility=self._estimate_credibility(url),
+                                credibility_score=self._estimate_credibility(url),
                                 cited_by=[self.agent_id],
                             )
                             sources.append(source)
