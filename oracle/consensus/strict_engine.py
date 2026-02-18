@@ -236,10 +236,14 @@ class StrictConsensusEngine(ConsensusEngine):
                 consensus.requires_human_review = True
                 consensus.reason = f"Confidence {consensus.confidence:.1%} below minimum {self.strict_config.min_consensus_confidence:.1%}"
 
-            # Check verification requirements
+            # Source tier verification is a quality signal, not a blocker.
+            # Google Search grounding sources often lack tier classification,
+            # so failing tier checks should not block consensus or trigger manual review.
             if not verification.passed:
-                consensus.requires_human_review = True
-                # Don't invalidate consensus, but flag for review
+                logger.warning(
+                    "Source tier verification failed but consensus reached — treating as warning",
+                    issues=verification.issues,
+                )
 
         # Step 5: Analyze disagreement
         disagreement = self._analyze_disagreement_detailed(results)

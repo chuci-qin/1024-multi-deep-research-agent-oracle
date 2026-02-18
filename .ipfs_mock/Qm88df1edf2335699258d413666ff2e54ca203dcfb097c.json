@@ -1,0 +1,160 @@
+{
+  "version": "1.0.0",
+  "market_id": 8888,
+  "question": "Is the current Bitcoin (BTC) price above 66000 USD as of February 19, 2026?",
+  "resolution_criteria": "Check Bitcoin/BTC spot price on Binance (BTC/USDT) or Coinbase (BTC-USD). YES if price is strictly above 66000 USD. NO if at or below 66000 USD.",
+  "research_timestamp": "2026-02-18T23:30:46.916088",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-2.5-flash",
+      "strategy": "comprehensive",
+      "outcome": "YES",
+      "confidence": 0.9,
+      "reasoning": "As of February 19, 2026, the Bitcoin (BTC) spot price on both Binance (BTC/USDT) and Coinbase (BTC-USD) is above 66000 USD. The current price on Binance (BTC/USDT) is 66,244.89 USD. The current price on Coinbase (BTC-USD) is 68,443.77 USD. Both of these prices are strictly above 66000 USD.",
+      "sources": [
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHtExQAF_84NMZdsDulYLhfu30tedL4F0nB_kdl8Z-5K79FoX8eMeILXFqoxyxp5JdkLnmfDTknizwZMv7l_LER_60a5Et7UECO1R49tZP2Cn6pTtl5LhU0nmMFx6G25Za1ZikG",
+          "title": "binance.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.5,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFzl3a6u3VvfAOlMYucSPyydMXvRGevMC8vs4nfnyvJRi3bDj4CWSWABJeFzFTtz90egOIoMYTNTdO-0lsnt_h9YFCkFJRKlGhoD-3zWVHQKl2iGRdEwUiojpkT5grIAyyy",
+          "title": "coinbase.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.5,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        }
+      ],
+      "source_count": 2,
+      "research_duration_seconds": 11.140547037124634,
+      "timestamp": "2026-02-18T23:30:42.448940",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-2.5-flash",
+      "strategy": "focused",
+      "outcome": "UNDETERMINED",
+      "confidence": 1.0,
+      "reasoning": "The question asks for the Bitcoin (BTC) price as of February 19, 2026. My current internal clock is set to Wednesday, February 18, 2026, at 11:30 PM UTC. As an AI, I do not have access to future real-time market data. Therefore, I cannot determine the Bitcoin price for February 19, 2026, at this moment, as the specified date has not yet fully arrived.",
+      "sources": [],
+      "source_count": 0,
+      "research_duration_seconds": 5.123611927032471,
+      "timestamp": "2026-02-18T23:30:36.435865",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-3",
+      "model": "gemini-2.5-flash",
+      "strategy": "diverse",
+      "outcome": "YES",
+      "confidence": 0.9,
+      "reasoning": "As of late February 18, 2026, and leading into February 19, 2026, multiple sources indicate that the Bitcoin (BTC) spot price is above 66000 USD. While one report from Binance at 19:39 PM UTC on February 18, 2026, showed the price at 65884.640625 USDT, more recent and live data from various platforms shows the price to be strictly above 66000 USD. Coinbase reports the current Bitcoin price at $68,443.77 USD. Binance's live spot price for BTC/USDT is 66244.89. TradingView shows the current price of Bitcoin (BTC) at 66,288 USD. The CoinDesk Bitcoin Price Index was reported at $66219.55 on February 18, 2026, 16:43 ET (21:43 GMT). Trading Economics also reported Bitcoin at 66284 USD on Wednesday, February 18th. Given that the current time is 11:30 PM UTC on February 18, 2026, these later readings are more indicative of the price as of February 19, 2026.",
+      "sources": [
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQE2DeBAUzAvL_nrmcJFfxMstgMJslRLqN87s_Rm66opBf5FX-Vyy1yVQsgZVZOJbwKhKWMhD-Fp2sX3TvG1_BLs-cAIYCi8XiLJCkQ25y48oWzH4Qn6lR1MSdweEZZYYRQ147cAiIbrxTkdtmrSJCpXPw==",
+          "title": "binance.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.5,
+          "cited_by": [
+            "gemini-agent-3"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQG2Vt4801i2WUYqrExeqIGCGgprE_CjvX0HUsXS1aY2v1KRLLOhWLTczhRNdpF89YQ3g6Q08BZ1XvsFhCjB-NTlqN50oG3voZGiuDRqN6B3AiFcwqqjXUuaz9vQQicT-vDJ",
+          "title": "coinbase.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.5,
+          "cited_by": [
+            "gemini-agent-3"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFkr2lgs3Nhpy87AJwbpHXozmrj2Hs-TAu61aZFyCESd93y2DdnEhl4M0v4y09IcIpOYcB7xwuN0lifcri0Kn4NgvMO4rXM_o5lm7mKmtCmtOZUvxjXeUdtL2OHg2DXKkSJSUmG",
+          "title": "binance.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.5,
+          "cited_by": [
+            "gemini-agent-3"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFLG6JTRDtx0iVTMm-IRqxUoa01kqII87CqLwZDtEOLnsh8yZBNLz3tsqtGpmdcxGj9hNnZFNDPZDZZxbFBMp9lmos8hjISp4Cr3euTOI5o_1ebsvF4NXy97C-y2SLcL2AJh6MO-bQ=",
+          "title": "tradingview.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.5,
+          "cited_by": [
+            "gemini-agent-3"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEx-uRQJ_2eNlPBu1sGfWhNeIbh1I5J7-lOLab-JcFQb3JqPy8baiucQQwHd0y83TuyDp8MfrGPFA9FJZc_EjekR5bG1Myjg2iTckLrCW-5H4mrB2y6e5LI1l2Peuin7PNrVaOdDmH-uFRxzbIcgP6_DmYEhoBYgb4zEwtPfzi7rKBHxXc3xJauwwXPVO_SQhGY-kQf258Y-DqpzXMN3_EvCcyK7K-kUtSdGXU2AvY=",
+          "title": "morningstar.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.5,
+          "cited_by": [
+            "gemini-agent-3"
+          ]
+        },
+        {
+          "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEn0a_hvGOva49CvN2iByWmaASjPHBXhkJt5qds_zvaNCct5DmJ93lh25fe-quGPHfFPmQN0bsEOSKVd3dVWAvTXCBHbmgg0l6BE5pgSMJNADOJP2tAb0fUFYzwo9lKpjq3tA==",
+          "title": "tradingeconomics.com",
+          "snippet": "",
+          "date": null,
+          "category": "domain_specific",
+          "relevance_score": 0.8,
+          "credibility_score": 0.5,
+          "cited_by": [
+            "gemini-agent-3"
+          ]
+        }
+      ],
+      "source_count": 6,
+      "research_duration_seconds": 15.59962511062622,
+      "timestamp": "2026-02-18T23:30:46.915657",
+      "error": null
+    }
+  ],
+  "consensus": {
+    "reached": false,
+    "outcome": "INVALID",
+    "confidence": 0.0,
+    "agreement_ratio": 0.0,
+    "weighted_ratio": 0.0,
+    "total_sources": 0,
+    "unique_sources": 0,
+    "source_overlap": 0.0,
+    "agent_count": 3,
+    "requires_human_review": true,
+    "reason": "Only 2 valid results, need 3"
+  },
+  "merged_sources": []
+}

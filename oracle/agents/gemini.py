@@ -170,42 +170,62 @@ class GeminiDeepResearchAgent(BaseAgent):
         deadline: str | None = None,
     ) -> str:
         """Build the research prompt for Gemini."""
-        deadline_text = f"\nDeadline: {deadline}" if deadline else ""
+        deadline_block = ""
+        if deadline:
+            deadline_block = f"""
+RESOLUTION TIMESTAMP (CRITICAL): {deadline}
+
+*** TIME PRECISION REQUIREMENT ***
+This prediction market resolves at the EXACT timestamp above. You MUST:
+1. Find data for this SPECIFIC moment in time — NOT "current" or "latest" data.
+2. Even a 1-minute difference is unacceptable. A price at 3:01 PM is NOT valid for a 3:00 PM resolution.
+3. Use time-sensitive data sources that provide historical minute-level or second-level data:
+   - Exchange APIs (Binance, Coinbase) with timestamp-specific candle data
+   - TradingView with exact time markers
+   - CoinGecko/CoinMarketCap historical snapshots
+   - Bloomberg/Reuters timestamped price feeds
+4. If you cannot find data for this EXACT timestamp, state that clearly and use UNDETERMINED.
+5. Cross-reference at least 2 independent sources for the same timestamp.
+"""
 
         strategy_instruction = {
             SearchStrategy.COMPREHENSIVE: """
-Search comprehensively across multiple source types:
-- Official sources (government, company announcements)
-- Major news outlets (Reuters, AP, Bloomberg, BBC)
-- Financial data sources (CoinGecko, TradingView)
-- Expert analysis and reports
+Search comprehensively across multiple source types, with emphasis on timestamped data:
+- Official sources (government, company announcements) with publication timestamps
+- Major news outlets (Reuters, AP, Bloomberg, BBC) with article timestamps
+- Financial data sources (CoinGecko, TradingView, CoinMarketCap) with exact time markers
+- Exchange price feeds (Binance, Coinbase, Kraken) with minute-level candle data
+- Expert analysis and reports with publication dates
 """,
             SearchStrategy.FOCUSED: """
-Focus on the most authoritative and recent sources:
-- Official announcements and data
-- Primary news sources
-- Verified factual data
+Focus on the most authoritative and time-precise sources:
+- Official announcements and data with publication timestamps
+- Primary exchange data (Binance BTC/USDT, Coinbase BTC-USD) with exact timestamps
+- Primary news sources (Reuters, AP, Bloomberg) with article timestamps
+- Verified factual data with temporal precision
 """,
             SearchStrategy.DIVERSE: """
-Gather diverse perspectives from different source types:
-- News from different regions
-- Social media discussions
-- Expert opinions
-- Community forums
+Gather diverse perspectives from different source types, all with timestamps:
+- News from different regions and time zones
+- Multiple exchanges (cross-verify prices at exact timestamps)
+- Social media discussions with post timestamps
+- Expert opinions and community forums
+- On-chain data and blockchain explorers
 """,
-        }.get(self.strategy, "Search for relevant information.")
+        }.get(self.strategy, "Search for relevant information with exact timestamps.")
 
-        return f"""You are an AI oracle for a prediction market. Your task is to research and determine the outcome of a question.
+        return f"""You are an AI oracle for a prediction market. Your task is to research and determine the outcome of a question based on VERIFIABLE, TIME-SPECIFIC evidence.
 
 QUESTION: {question}
 
 RESOLUTION CRITERIA: {resolution_criteria}
-{deadline_text}
-
+{deadline_block}
 RESEARCH INSTRUCTIONS:
 {strategy_instruction}
 
 Search the web thoroughly using Google Search. Gather evidence from multiple sources.
+For price-based or time-sensitive markets, you MUST find data at the exact resolution timestamp.
+Do NOT use "current" prices — find the HISTORICAL price at the specified resolution moment.
 
 After researching, provide your determination in the following JSON format:
 
@@ -213,13 +233,13 @@ After researching, provide your determination in the following JSON format:
 {{
     "outcome": "YES" or "NO" or "UNDETERMINED",
     "confidence": 0.0 to 1.0,
-    "reasoning": "Your detailed reasoning based on the evidence found",
-    "key_facts": ["fact1", "fact2", "fact3"]
+    "reasoning": "Your detailed reasoning with exact timestamps and source URLs",
+    "key_facts": ["fact1 (source, timestamp)", "fact2 (source, timestamp)", "fact3 (source, timestamp)"]
 }}
 ```
 
 Be precise and base your answer on factual evidence from your search results.
-If the evidence is unclear or contradictory, use "UNDETERMINED".
+If you cannot find data for the EXACT resolution timestamp, use "UNDETERMINED" — do NOT guess.
 """
 
     def _extract_sources(self, response) -> list[ResearchSource]:
