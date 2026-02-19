@@ -44,6 +44,7 @@ dependencies = [
     # "anchorpy>=0.18.0",
     "psycopg2-binary>=2.9.11",
     "pyjwt>=2.11.0",
+    "yfinance>=1.2.0",
 ]
 
 [project.optional-dependencies]

@@ -5,6 +5,8 @@ Calculates consensus from multiple agent results using
 weighted voting and source quality analysis.
 """
 
+import os
+
 import structlog
 from pydantic import BaseModel, Field
 
@@ -18,11 +20,17 @@ from oracle.models import (
 logger = structlog.get_logger()
 
 
+def _default_min_agents() -> int:
+    return int(os.getenv("MIN_VALID_AGENTS", os.getenv("MIN_AGENTS", "2")))
+
+
 class ConsensusConfig(BaseModel):
     """Configuration for consensus calculation."""
 
-    # Minimum agents required
-    min_agents: int = Field(default=3, description="Minimum agents required")
+    # Minimum VALID agents required to enter voting.
+    # Read from MIN_VALID_AGENTS env (fallback MIN_AGENTS, default 2).
+    # With 3 agents running, min_agents=2 allows 1 failure.
+    min_agents: int = Field(default_factory=_default_min_agents, description="Minimum valid agents required for voting")
 
     # Consensus threshold (0.67 = 2/3 majority)
     threshold: float = Field(default=0.67, ge=0.5, le=1.0)

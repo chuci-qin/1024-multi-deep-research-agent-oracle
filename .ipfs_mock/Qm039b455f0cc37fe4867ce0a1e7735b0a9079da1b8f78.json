@@ -1,0 +1,116 @@
+{
+  "version": "1.0.0",
+  "market_id": 27,
+  "question": "[E2E] Will BTC be above $97,000 at 7:26:51 PM?",
+  "resolution_criteria": "{\"source_type\":\"llm_oracle\",\"trusted_sources\":[],\"verification_method\":\"ai_consensus\"}",
+  "research_timestamp": "2026-02-19T01:10:43.524483",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-2.5-flash",
+      "strategy": "comprehensive",
+      "outcome": "NO",
+      "confidence": 1.0,
+      "reasoning": "According to verified API data from Yahoo Finance for BTC-USD, the closing price at 2026-02-19 00:27:00+00:00 UTC was $66,331.78. This timestamp is only 9 seconds after the resolution timestamp of 2026-02-19T00:26:51.826+00:00 UTC. Since $66,331.78 is significantly below the $97,000 threshold, and given the minimal time difference, it is highly improbable that BTC was above $97,000 at the exact resolution timestamp. Bitcoin's price would not fluctuate by such a large margin (over 46%) in a matter of seconds.",
+      "sources": [
+        {
+          "url": "api://yahoo_finance/get_crypto_price_at_timestamp",
+          "title": "get_crypto_price_at_timestamp (yahoo_finance)",
+          "snippet": "{\"source\": \"yahoo_finance\", \"symbol\": \"BTC-USD\", \"interval\": \"1m\", \"candle_time\": \"2026-02-19 00:27:00+00:00\", \"open\": 66331.78, \"high\": 66331.78, \"low\": 66331.78, \"close\": 66331.78, \"volume\": 1652736.0, \"time_diff_seconds\": 9.0}",
+          "date": null,
+          "category": "official",
+          "relevance_score": 1.0,
+          "credibility_score": 1.0,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        }
+      ],
+      "source_count": 1,
+      "research_duration_seconds": 7.5718889236450195,
+      "timestamp": "2026-02-19T01:10:40.582263",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-2.5-flash",
+      "strategy": "focused",
+      "outcome": "NO",
+      "confidence": 1.0,
+      "reasoning": "The resolution timestamp for the question is 2026-02-19T00:26:51.826+00:00. According to the verified API data, the closing price of BTC-USD at 2026-02-19 00:27:00+00:00 was $66,331.78. This data point is 9 seconds after the exact resolution timestamp, which falls well within the 'BEST' and 'GOOD' criteria for time-sensitive data. The price of $66,331.78 is significantly below the threshold of $97,000. Given the minimal time difference and the substantial price gap, it is highly improbable that BTC would have been above $97,000 at the exact resolution timestamp.",
+      "sources": [
+        {
+          "url": "api://yahoo_finance/get_crypto_price_at_timestamp",
+          "title": "get_crypto_price_at_timestamp (yahoo_finance)",
+          "snippet": "{\"source\": \"yahoo_finance\", \"symbol\": \"BTC-USD\", \"interval\": \"1m\", \"candle_time\": \"2026-02-19 00:27:00+00:00\", \"open\": 66331.78, \"high\": 66331.78, \"low\": 66331.78, \"close\": 66331.78, \"volume\": 1652736.0, \"time_diff_seconds\": 9.0}",
+          "date": null,
+          "category": "official",
+          "relevance_score": 1.0,
+          "credibility_score": 1.0,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        }
+      ],
+      "source_count": 1,
+      "research_duration_seconds": 10.509943008422852,
+      "timestamp": "2026-02-19T01:10:43.523986",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-3",
+      "model": "gemini-2.5-flash",
+      "strategy": "diverse",
+      "outcome": "NO",
+      "confidence": 1.0,
+      "reasoning": "The verified API data for BTC-USD at 2026-02-19 00:27:00+00:00 (which is 7:27:00 PM on February 18, 2026, UTC-7, or 7:27:00 PM on February 19, 2026, UTC+0) shows a closing price of $66,331.78. This timestamp is only 9 seconds after the resolution timestamp of 2026-02-19T00:26:51Z. Since $66,331.78 is significantly below $97,000, and the time difference is minimal, the outcome is definitively 'NO'.",
+      "sources": [
+        {
+          "url": "api://yahoo_finance/get_crypto_price_at_timestamp",
+          "title": "get_crypto_price_at_timestamp (yahoo_finance)",
+          "snippet": "{\"source\": \"yahoo_finance\", \"symbol\": \"BTC-USD\", \"interval\": \"1m\", \"candle_time\": \"2026-02-19 00:27:00+00:00\", \"open\": 66331.78, \"high\": 66331.78, \"low\": 66331.78, \"close\": 66331.78, \"volume\": 1652736.0, \"time_diff_seconds\": 9.0}",
+          "date": null,
+          "category": "official",
+          "relevance_score": 1.0,
+          "credibility_score": 1.0,
+          "cited_by": [
+            "gemini-agent-3"
+          ]
+        }
+      ],
+      "source_count": 1,
+      "research_duration_seconds": 6.902678966522217,
+      "timestamp": "2026-02-19T01:10:39.917699",
+      "error": null
+    }
+  ],
+  "consensus": {
+    "reached": true,
+    "outcome": "NO",
+    "confidence": 1.0,
+    "agreement_ratio": 1.0,
+    "weighted_ratio": 1.0,
+    "total_sources": 3,
+    "unique_sources": 1,
+    "source_overlap": 1.0,
+    "agent_count": 3,
+    "requires_human_review": false,
+    "reason": null
+  },
+  "merged_sources": [
+    {
+      "url": "api://yahoo_finance/get_crypto_price_at_timestamp",
+      "title": "get_crypto_price_at_timestamp (yahoo_finance)",
+      "snippet": "{\"source\": \"yahoo_finance\", \"symbol\": \"BTC-USD\", \"interval\": \"1m\", \"candle_time\": \"2026-02-19 00:27:00+00:00\", \"open\": 66331.78, \"high\": 66331.78, \"low\": 66331.78, \"close\": 66331.78, \"volume\": 1652736.0, \"time_diff_seconds\": 9.0}",
+      "date": null,
+      "category": "official",
+      "relevance_score": 1.0,
+      "credibility_score": 1.0,
+      "cited_by": [
+        "gemini-agent-1",
+        "gemini-agent-2",
+        "gemini-agent-3"
+      ]
+    }
+  ]
+}

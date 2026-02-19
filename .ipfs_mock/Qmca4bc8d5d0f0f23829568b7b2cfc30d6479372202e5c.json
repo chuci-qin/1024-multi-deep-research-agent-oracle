@@ -1,0 +1,116 @@
+{
+  "version": "1.0.0",
+  "market_id": 4444,
+  "question": "Was Bitcoin (BTC) price above 97000 USD at 7:26 PM UTC on February 18, 2026?",
+  "resolution_criteria": "Check BTC/USDT spot price at 2026-02-18T19:26:00 UTC. YES if above 97000, NO if at or below.",
+  "research_timestamp": "2026-02-19T00:53:53.767871",
+  "agents": [
+    {
+      "agent_id": "gemini-agent-1",
+      "model": "gemini-2.5-flash",
+      "strategy": "comprehensive",
+      "outcome": "NO",
+      "confidence": 1.0,
+      "reasoning": "According to CoinGecko data, the BTC/USDT spot price at 2026-02-18T19:25:30.700000+00:00 UTC was 66290.63796201021 USD. This timestamp is approximately 30 seconds before the resolution timestamp of 2026-02-18T19:26:00 UTC. The recorded price of 66290.63796201021 USD is significantly below the threshold of 97000 USD. Given the substantial difference, it is highly improbable that the price would have increased by over 30,000 USD in such a short timeframe.",
+      "sources": [
+        {
+          "url": "api://coingecko/get_crypto_price_at_timestamp",
+          "title": "get_crypto_price_at_timestamp (coingecko)",
+          "snippet": "{\"source\": \"coingecko\", \"symbol\": \"BTCUSDT\", \"price\": 66290.63796201021, \"timestamp\": \"2026-02-18T19:25:30.700000+00:00\", \"note\": \"CoinGecko fallback \\u2014 may have lower time precision than Binance\"}",
+          "date": null,
+          "category": "official",
+          "relevance_score": 1.0,
+          "credibility_score": 1.0,
+          "cited_by": [
+            "gemini-agent-1"
+          ]
+        }
+      ],
+      "source_count": 1,
+      "research_duration_seconds": 6.15568995475769,
+      "timestamp": "2026-02-19T00:53:52.919486",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-2",
+      "model": "gemini-2.5-flash",
+      "strategy": "focused",
+      "outcome": "NO",
+      "confidence": 1.0,
+      "reasoning": "According to verified API data from CoinGecko, the BTC/USDT spot price at 2026-02-18T19:25:30.700000+00:00 was 66290.63796201021 USD. This timestamp is approximately 30 seconds before the resolution timestamp of 2026-02-18T19:26:00 UTC. The price of 66290.63796201021 USD is significantly below the threshold of 97000 USD. Given the substantial difference, it is highly improbable that the price would have moved above 97000 USD in such a short timeframe.",
+      "sources": [
+        {
+          "url": "api://coingecko/get_crypto_price_at_timestamp",
+          "title": "get_crypto_price_at_timestamp (coingecko)",
+          "snippet": "{\"source\": \"coingecko\", \"symbol\": \"BTCUSDT\", \"price\": 66290.63796201021, \"timestamp\": \"2026-02-18T19:25:30.700000+00:00\", \"note\": \"CoinGecko fallback \\u2014 may have lower time precision than Binance\"}",
+          "date": null,
+          "category": "official",
+          "relevance_score": 1.0,
+          "credibility_score": 1.0,
+          "cited_by": [
+            "gemini-agent-2"
+          ]
+        }
+      ],
+      "source_count": 1,
+      "research_duration_seconds": 6.07634711265564,
+      "timestamp": "2026-02-19T00:53:52.841772",
+      "error": null
+    },
+    {
+      "agent_id": "gemini-agent-3",
+      "model": "gemini-2.5-flash",
+      "strategy": "diverse",
+      "outcome": "NO",
+      "confidence": 1.0,
+      "reasoning": "The verified API data shows the BTC/USDT spot price at 2026-02-18T19:25:30.700000+00:00 was 66290.63796201021 USD. This timestamp is approximately 29 seconds before the resolution timestamp of 2026-02-18T19:26:00 UTC. The price of 66290.63796201021 USD is significantly below the threshold of 97000 USD. Given the substantial difference of over 30,000 USD, it is highly improbable for the price to have moved above 97000 USD within such a short timeframe (less than a minute). Therefore, the outcome is definitively NO.",
+      "sources": [
+        {
+          "url": "api://coingecko/get_crypto_price_at_timestamp",
+          "title": "get_crypto_price_at_timestamp (coingecko)",
+          "snippet": "{\"source\": \"coingecko\", \"symbol\": \"BTCUSDT\", \"price\": 66290.63796201021, \"timestamp\": \"2026-02-18T19:25:30.700000+00:00\", \"note\": \"CoinGecko fallback \\u2014 may have lower time precision than Binance\"}",
+          "date": null,
+          "category": "official",
+          "relevance_score": 1.0,
+          "credibility_score": 1.0,
+          "cited_by": [
+            "gemini-agent-3"
+          ]
+        }
+      ],
+      "source_count": 1,
+      "research_duration_seconds": 7.001215934753418,
+      "timestamp": "2026-02-19T00:53:53.767351",
+      "error": null
+    }
+  ],
+  "consensus": {
+    "reached": true,
+    "outcome": "NO",
+    "confidence": 1.0,
+    "agreement_ratio": 1.0,
+    "weighted_ratio": 1.0,
+    "total_sources": 3,
+    "unique_sources": 1,
+    "source_overlap": 1.0,
+    "agent_count": 3,
+    "requires_human_review": false,
+    "reason": null
+  },
+  "merged_sources": [
+    {
+      "url": "api://coingecko/get_crypto_price_at_timestamp",
+      "title": "get_crypto_price_at_timestamp (coingecko)",
+      "snippet": "{\"source\": \"coingecko\", \"symbol\": \"BTCUSDT\", \"price\": 66290.63796201021, \"timestamp\": \"2026-02-18T19:25:30.700000+00:00\", \"note\": \"CoinGecko fallback \\u2014 may have lower time precision than Binance\"}",
+      "date": null,
+      "category": "official",
+      "relevance_score": 1.0,
+      "credibility_score": 1.0,
+      "cited_by": [
+        "gemini-agent-1",
+        "gemini-agent-2",
+        "gemini-agent-3"
+      ]
+    }
+  ]
+}

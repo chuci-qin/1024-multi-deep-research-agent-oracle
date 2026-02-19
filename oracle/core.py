@@ -74,11 +74,13 @@ class MultiAgentOracle:
             self.agents = self._create_default_agents()
 
         # Initialize consensus engine
-        # min_agents should match the actual number of agents we're using
+        # min_agents from env MIN_VALID_AGENTS (default 2), allows 1-of-3 agent failure
+        import os
+        min_valid = int(os.getenv("MIN_VALID_AGENTS", "2"))
         self.consensus_engine = consensus_engine or ConsensusEngine(
             ConsensusConfig(
                 threshold=self.config.consensus_threshold,
-                min_agents=len(self.agents),  # Use actual agent count
+                min_agents=min_valid,
             )
         )
 

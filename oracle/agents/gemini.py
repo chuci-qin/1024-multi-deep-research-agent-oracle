@@ -13,9 +13,11 @@ from urllib.parse import urlparse
 
 import structlog
 from google import genai  # New SDK
+from google.genai import types as genai_types
 
 from oracle.agents.base import AgentConfig, BaseAgent, SearchStrategy
 from oracle.models import AgentResult, Outcome, ResearchSource, SourceCategory
+from oracle.tools import get_all_tools, get_tool
 
 logger = structlog.get_logger()
 
@@ -68,6 +70,119 @@ class GeminiDeepResearchAgent(BaseAgent):
     def model_name(self) -> str:
         return self._model_name
 
+    async def _execute_tool_call(self, function_call) -> dict:
+        """Execute a Gemini function call by routing to the registered tool."""
+        tool_name = function_call.name
+        tool_args = dict(function_call.args) if function_call.args else {}
+
+        tool = get_tool(tool_name)
+        if not tool:
+            logger.warning("Unknown tool called by Gemini", tool_name=tool_name)
+            return {"error": f"Unknown tool: {tool_name}"}
+
+        logger.info("Executing tool", tool_name=tool_name, args=tool_args)
+        try:
+            result = await tool.execute(**tool_args)
+            logger.info("Tool result", tool_name=tool_name, result_keys=list(result.keys()))
+            return result
+        except Exception as e:
+            logger.error("Tool execution failed", tool_name=tool_name, error=str(e))
+            return {"error": str(e)}
+
+    async def _phase1_tool_calls(self, prompt: str) -> tuple[list[dict], list[ResearchSource]]:
+        """Phase 1: Let Gemini decide whether to call data tools (Binance, etc.).
+        
+        Uses function_declarations ONLY (no google_search — they can't coexist).
+        Returns (tool_data_list, tool_sources) for injection into Phase 2.
+        """
+        all_tools = get_all_tools()
+        if not all_tools:
+            return [], []
+
+        func_decls = [t.to_function_declaration() for t in all_tools]
+        tool_prompt = (
+            f"You have access to data tools. Decide if any are needed to answer this question.\n"
+            f"If the question involves cryptocurrency prices, call get_crypto_price_at_timestamp or get_crypto_price_current.\n"
+            f"If the question does NOT need real-time data APIs, just reply 'NO_TOOLS_NEEDED'.\n\n"
+            f"Question: {prompt[:500]}"
+        )
+
+        try:
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=self._model_name,
+                contents=tool_prompt,
+                config={
+                    "tools": [genai_types.Tool(function_declarations=func_decls)],
+                    "temperature": 0.0,
+                    "max_output_tokens": 1024,
+                },
+            )
+        except Exception as e:
+            logger.warning("Phase 1 tool call failed", error=str(e))
+            return [], []
+
+        tool_data = []
+        tool_sources = []
+
+        # Process up to 3 rounds of function calls
+        conversation = [tool_prompt]
+        for round_num in range(3):
+            if not response.candidates or len(response.candidates) == 0:
+                break
+            if not hasattr(response.candidates[0], 'content') or not response.candidates[0].content or not response.candidates[0].content.parts:
+                break
+
+            function_calls = [
+                p.function_call
+                for p in response.candidates[0].content.parts
+                if hasattr(p, "function_call") and p.function_call and p.function_call.name
+            ]
+
+            if not function_calls:
+                break
+
+            logger.info("Phase 1: Gemini requested tools", round=round_num + 1, tools=[fc.name for fc in function_calls])
+
+            function_responses = []
+            for fc in function_calls:
+                result = await self._execute_tool_call(fc)
+                tool_data.append({"tool": fc.name, "args": dict(fc.args) if fc.args else {}, "result": result})
+                function_responses.append(
+                    genai_types.Part.from_function_response(name=fc.name, response=result)
+                )
+                source_name = result.get("source", fc.name)
+                tool_sources.append(ResearchSource(
+                    url=f"api://{source_name}/{fc.name}",
+                    title=f"{fc.name} ({source_name})",
+                    snippet=json.dumps(result, default=str)[:500],
+                    category=SourceCategory.OFFICIAL,
+                    relevance_score=1.0,
+                    credibility_score=1.0,
+                    cited_by=[self.agent_id],
+                ))
+
+            conversation.append(response.candidates[0].content)
+            conversation.append(genai_types.Content(role="user", parts=function_responses))
+
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=self._model_name,
+                contents=conversation,
+                config={
+                    "tools": [genai_types.Tool(function_declarations=func_decls)],
+                    "temperature": 0.0,
+                    "max_output_tokens": 1024,
+                },
+            )
+
+        if tool_data:
+            logger.info("Phase 1 complete", agent_id=self.agent_id, tools_called=len(tool_data))
+        else:
+            logger.debug("Phase 1: no tools needed", agent_id=self.agent_id)
+
+        return tool_data, tool_sources
+
     async def research(
         self,
         question: str,
@@ -75,7 +190,9 @@ class GeminiDeepResearchAgent(BaseAgent):
         deadline: str | None = None,
     ) -> AgentResult:
         """
-        Conduct deep research using Gemini with Google Search grounding.
+        Two-phase research:
+          Phase 1 — Function Calling: Gemini decides if it needs data tools (Binance API, etc.)
+          Phase 2 — Google Search: Web research with tool data injected into prompt
         """
         start_time = time.time()
 
@@ -92,17 +209,25 @@ class GeminiDeepResearchAgent(BaseAgent):
                 error="GEMINI_API_KEY not configured",
             )
 
-        logger.info(
-            "Starting research",
-            agent_id=self.agent_id,
-            question=question[:100],
-        )
+        logger.info("Starting research", agent_id=self.agent_id, question=question[:100])
 
         try:
-            # Build research prompt
             prompt = self._build_research_prompt(question, resolution_criteria, deadline)
 
-            # Generate response with Google Search grounding
+            # --- Phase 1: Tool Calls (function_declarations only) ---
+            tool_data, tool_sources = await self._phase1_tool_calls(prompt)
+
+            # Inject tool data into prompt for Phase 2
+            if tool_data:
+                data_block = "\n\n=== VERIFIED API DATA (from Phase 1 tool calls) ===\n"
+                for td in tool_data:
+                    data_block += f"\nTool: {td['tool']}({json.dumps(td['args'], default=str)})\n"
+                    data_block += f"Result: {json.dumps(td['result'], default=str)}\n"
+                data_block += "\nUse this verified API data as your PRIMARY evidence. It is more reliable than web search results.\n"
+                data_block += "=== END VERIFIED API DATA ===\n"
+                prompt = prompt + data_block
+
+            # --- Phase 2: Google Search (grounding only) ---
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self._model_name,
@@ -114,10 +239,9 @@ class GeminiDeepResearchAgent(BaseAgent):
                 },
             )
 
-            # Extract sources from grounding metadata
-            sources = self._extract_sources(response)
+            # Merge sources: grounding sources + tool API sources
+            sources = self._extract_sources(response) + tool_sources
 
-            # Parse outcome and confidence from response
             outcome, confidence, reasoning = self._parse_response(response)
 
             duration = time.time() - start_time
@@ -139,6 +263,7 @@ class GeminiDeepResearchAgent(BaseAgent):
                 outcome=outcome.value,
                 confidence=confidence,
                 source_count=len(sources),
+                tool_sources=len(tool_sources),
                 duration=f"{duration:.2f}s",
             )
 
@@ -173,19 +298,31 @@ class GeminiDeepResearchAgent(BaseAgent):
         deadline_block = ""
         if deadline:
             deadline_block = f"""
-RESOLUTION TIMESTAMP (CRITICAL): {deadline}
+RESOLUTION TIMESTAMP: {deadline}
 
-*** TIME PRECISION REQUIREMENT ***
-This prediction market resolves at the EXACT timestamp above. You MUST:
-1. Find data for this SPECIFIC moment in time — NOT "current" or "latest" data.
-2. Even a 1-minute difference is unacceptable. A price at 3:01 PM is NOT valid for a 3:00 PM resolution.
-3. Use time-sensitive data sources that provide historical minute-level or second-level data:
-   - Exchange APIs (Binance, Coinbase) with timestamp-specific candle data
-   - TradingView with exact time markers
-   - CoinGecko/CoinMarketCap historical snapshots
-   - Bloomberg/Reuters timestamped price feeds
-4. If you cannot find data for this EXACT timestamp, state that clearly and use UNDETERMINED.
-5. Cross-reference at least 2 independent sources for the same timestamp.
+*** TIME-AWARE RESOLUTION RULES ***
+This prediction market resolves based on conditions at or near the timestamp above.
+
+Priority order for finding evidence:
+1. BEST: Data at the exact resolution timestamp (minute-level candle from exchanges)
+2. GOOD: Data within 5 minutes of the resolution timestamp
+3. ACCEPTABLE: Data within 1 hour — if the gap between the data and the threshold is large enough
+   that the outcome would not change within that time window
+4. USE COMMON SENSE: If BTC is at $66,000 and the question asks "above $97,000?", 
+   the answer is clearly NO regardless of minor time differences — BTC cannot move 47% in minutes.
+
+When to use UNDETERMINED:
+- The data you found is very close to the threshold AND the time gap is significant
+- Example: Question asks "above $66,500?" and closest data shows $66,400 from 30 min ago → UNDETERMINED
+- Do NOT use UNDETERMINED when the answer is obvious from available data
+
+Preferred time-sensitive data sources:
+- Exchange price feeds (Binance BTC/USDT, Coinbase BTC-USD) with minute-level candles
+- CoinGecko/CoinMarketCap with timestamped snapshots
+- TradingView with exact time markers
+- Bloomberg/Reuters timestamped feeds
+
+Cross-reference at least 2 independent sources when possible.
 """
 
         strategy_instruction = {
