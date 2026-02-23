@@ -40,31 +40,48 @@ class GeminiDeepResearchAgent(BaseAgent):
     ):
         super().__init__(agent_id, strategy, config)
 
-        # Configure Gemini API
-        api_key = api_key or os.getenv("GEMINI_API_KEY")
-        self._api_key = api_key
         self._model_name = model
         self._initialized = False
         self.client = None
 
-        # Try to initialize
-        if api_key:
+        use_vertex = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
+
+        if use_vertex:
             try:
-                self.client = genai.Client(api_key=api_key)
+                project = os.getenv("VERTEX_AI_PROJECT", "gen-lang-client-0475545182")
+                location = os.getenv("VERTEX_AI_LOCATION", "us-central1")
+                self.client = genai.Client(vertexai=True, project=project, location=location)
                 self._initialized = True
                 logger.info(
-                    "Initialized Gemini agent",
+                    "Initialized Gemini agent (Vertex AI)",
                     agent_id=self.agent_id,
                     model=model,
+                    project=project,
+                    location=location,
                     strategy=strategy.value,
                 )
             except Exception as e:
-                logger.warning(f"Failed to initialize Gemini agent: {e}")
+                logger.warning(f"Failed to initialize Vertex AI agent: {e}")
         else:
-            logger.warning(
-                "GEMINI_API_KEY not set - agent will fail on research calls",
-                agent_id=self.agent_id,
-            )
+            api_key = api_key or os.getenv("GEMINI_API_KEY")
+            self._api_key = api_key
+            if api_key:
+                try:
+                    self.client = genai.Client(api_key=api_key)
+                    self._initialized = True
+                    logger.info(
+                        "Initialized Gemini agent (AI Studio)",
+                        agent_id=self.agent_id,
+                        model=model,
+                        strategy=strategy.value,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to initialize Gemini agent: {e}")
+            else:
+                logger.warning(
+                    "GEMINI_API_KEY not set - agent will fail on research calls",
+                    agent_id=self.agent_id,
+                )
 
     @property
     def model_name(self) -> str:
@@ -376,7 +393,8 @@ After researching, provide your determination in the following JSON format:
 ```
 
 Be precise and base your answer on factual evidence from your search results.
-If you cannot find data for the EXACT resolution timestamp, use "UNDETERMINED" — do NOT guess.
+Use common sense: if the available data clearly answers the question (e.g., price is well above/below threshold), give a definitive YES/NO even if the data is a few minutes old.
+Only use UNDETERMINED when the data is very close to the threshold AND the time gap is significant.
 """
 
     def _extract_sources(self, response) -> list[ResearchSource]:

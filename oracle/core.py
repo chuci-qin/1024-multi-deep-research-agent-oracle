@@ -6,6 +6,7 @@ calculates consensus, and stores results.
 """
 
 import asyncio
+import os
 import uuid
 from datetime import datetime
 
@@ -32,8 +33,8 @@ class OracleConfig(BaseModel):
     num_agents: int = Field(default=3, ge=1, le=10)
     agent_timeout_seconds: int = Field(default=300)
 
-    # Consensus settings
-    consensus_threshold: float = Field(default=0.67, ge=0.5, le=1.0)
+    # Consensus settings (overridden in __init__ from env CONSENSUS_THRESHOLD)
+    consensus_threshold: float = Field(default=0.66, ge=0.5, le=1.0)
     min_confidence: float = Field(default=0.5, ge=0.0, le=1.0)
 
     # Storage settings
@@ -74,12 +75,12 @@ class MultiAgentOracle:
             self.agents = self._create_default_agents()
 
         # Initialize consensus engine
-        # min_agents from env MIN_VALID_AGENTS (default 2), allows 1-of-3 agent failure
         import os
         min_valid = int(os.getenv("MIN_VALID_AGENTS", "2"))
+        threshold = float(os.getenv("CONSENSUS_THRESHOLD", "0.66"))
         self.consensus_engine = consensus_engine or ConsensusEngine(
             ConsensusConfig(
-                threshold=self.config.consensus_threshold,
+                threshold=threshold,
                 min_agents=min_valid,
             )
         )
@@ -98,31 +99,39 @@ class MultiAgentOracle:
         )
 
     def _create_default_agents(self) -> list[BaseAgent]:
-        """Create default set of Gemini agents with different strategies."""
-        import os
+        """Create default set of Gemini agents with different strategies and API keys."""
 
-        # Strategies cycle for any number of agents
         base_strategies = [
             SearchStrategy.COMPREHENSIVE,
             SearchStrategy.FOCUSED,
             SearchStrategy.DIVERSE,
         ]
 
-        # Get model from environment (default: gemini-1.5-flash for stability)
         model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
-
-        # Get number of agents from environment
         num_agents = int(os.getenv("MIN_AGENTS", str(self.config.num_agents)))
+
+        # Collect all available API keys for distribution
+        api_keys = [k for k in [
+            os.getenv("GEMINI_API_KEY"),
+            os.getenv("GEMINI_API_KEY_2"),
+            os.getenv("GEMINI_API_KEY_3"),
+        ] if k]
+
+        if not api_keys:
+            logger.error("No GEMINI_API_KEY configured!")
 
         agents = []
         for i in range(num_agents):
-            # Cycle through strategies if num_agents > len(base_strategies)
             strategy = base_strategies[i % len(base_strategies)]
+            api_key = api_keys[i % len(api_keys)] if api_keys else None
+            key_suffix = f"...{api_key[-4:]}" if api_key else "NONE"
             agent = GeminiDeepResearchAgent(
+                api_key=api_key,
                 agent_id=f"gemini-agent-{i + 1}",
                 strategy=strategy,
                 model=model,
             )
+            logger.info(f"Agent {i+1} → key={key_suffix}, strategy={strategy.value}")
             agents.append(agent)
 
         return agents
@@ -169,10 +178,36 @@ class MultiAgentOracle:
             callback_url=callback_url,
         )
 
-        # Run all agents in parallel
-        agent_results = await self._run_agents(question, resolution_criteria, deadline)
+        # Run agents with internal retry loop
+        max_retries = int(os.getenv("MAX_AGENT_RETRIES", "10"))
+        retry_base_delay = float(os.getenv("AGENT_RETRY_BASE_DELAY", "2"))
+        min_valid = self.consensus_engine.config.min_agents
 
-        # Calculate consensus
+        agent_results = []
+        for attempt in range(max_retries):
+            agent_results = await self._run_agents(question, resolution_criteria, deadline)
+            valid_count = sum(1 for r in agent_results if r.is_valid)
+
+            if valid_count >= min_valid:
+                if attempt > 0:
+                    logger.info(f"✅ Retry succeeded on attempt {attempt + 1}/{max_retries}: {valid_count} valid agents")
+                break
+
+            if attempt < max_retries - 1:
+                delay = min(retry_base_delay * (2 ** attempt), 30)
+                failed_errors = [r.error for r in agent_results if r.error]
+                logger.warning(
+                    f"⚠️ Attempt {attempt + 1}/{max_retries}: only {valid_count}/{len(agent_results)} valid agents. "
+                    f"Retrying in {delay:.0f}s... Errors: {failed_errors[:3]}"
+                )
+                await asyncio.sleep(delay)
+            else:
+                logger.error(
+                    f"❌ All {max_retries} attempts exhausted. valid_agents={valid_count}/{len(agent_results)}. "
+                    f"Proceeding with best available results."
+                )
+
+        # Calculate consensus from best attempt
         consensus = self.consensus_engine.calculate(agent_results)
 
         # Merge sources from agreeing agents

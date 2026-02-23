@@ -347,9 +347,9 @@ def create_app() -> FastAPI:
                     p.value for p in StrategyFactory.get_recommended_profiles(agent_count)
                 ]
 
-            consensus_threshold = 0.67
+            consensus_threshold = float(os.getenv("CONSENSUS_THRESHOLD", "0.66"))
             if request.llm_config and "consensus_threshold" in request.llm_config:
-                consensus_threshold = request.llm_config.get("consensus_threshold", 0.67)
+                consensus_threshold = request.llm_config.get("consensus_threshold", consensus_threshold)
 
             # Build config data
             config = OracleConfigData(
@@ -660,7 +660,7 @@ async def _execute_resolution(
         oracle_config = builder.build_config(
             agent_count=agent_count,
             agent_strategies=strategies,
-            consensus_threshold=request.consensus_threshold or 0.67,
+            consensus_threshold=request.consensus_threshold or float(os.getenv("CONSENSUS_THRESHOLD", "0.66")),
         )
         
         # Calculate hashes
@@ -679,7 +679,7 @@ async def _execute_resolution(
         # Step 3: Run strict consensus check
         strict_engine = StrictConsensusEngine(
             config=StrictConsensusConfig(
-                threshold=request.consensus_threshold or 0.67,
+                threshold=request.consensus_threshold or float(os.getenv("CONSENSUS_THRESHOLD", "0.66")),
             )
         )
         

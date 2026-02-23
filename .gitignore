@@ -94,6 +94,7 @@ keys/
 *.json.key
 *.pem
 *.key
+gcp-vertex-sa.json
 
 # Local development
 .local/
@@ -114,3 +115,6 @@ logs/
 
 # Test artifacts
 test_results/
+
+# IPFS mock data
+.ipfs_mock/
