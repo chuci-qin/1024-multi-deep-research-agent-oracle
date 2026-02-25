@@ -48,6 +48,15 @@ class GeminiDeepResearchAgent(BaseAgent):
 
         if use_vertex:
             try:
+                # Support injecting GCP credentials JSON via env var (for Docker/EasyPanel)
+                creds_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
+                if creds_json and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+                    import tempfile
+                    fd, creds_path = tempfile.mkstemp(suffix=".json", prefix="gcp-sa-")
+                    with os.fdopen(fd, "w") as f:
+                        f.write(creds_json)
+                    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+
                 project = os.getenv("VERTEX_AI_PROJECT", "gen-lang-client-0475545182")
                 location = os.getenv("VERTEX_AI_LOCATION", "us-central1")
                 self.client = genai.Client(vertexai=True, project=project, location=location)

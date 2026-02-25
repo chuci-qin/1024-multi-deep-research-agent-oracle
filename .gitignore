@@ -57,6 +57,8 @@ coverage.xml
 
 # Environments
 .env
+.env.production
+.env.staging
 .venv
 env/
 venv/
