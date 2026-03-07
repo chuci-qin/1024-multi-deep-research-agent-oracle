@@ -10,9 +10,9 @@ All are free — no API key required.
 """
 
 import asyncio
-import urllib.request
 import json
-from datetime import datetime, timezone, timedelta
+import urllib.request
+from datetime import UTC, datetime, timedelta
 
 import structlog
 
@@ -134,7 +134,7 @@ class CryptoPriceAtTimestamp(BaseTool):
             if not data or not isinstance(data, list) or len(data) == 0:
                 return None
             candle = data[0]
-            open_time = datetime.fromtimestamp(candle[0] / 1000, tz=timezone.utc)
+            open_time = datetime.fromtimestamp(candle[0] / 1000, tz=UTC)
             result = {
                 "source": "binance",
                 "symbol": symbol,
@@ -162,7 +162,7 @@ class CryptoPriceAtTimestamp(BaseTool):
             prices = data.get("prices", [])
             if prices:
                 closest = min(prices, key=lambda p: abs(p[0] / 1000 - dt.timestamp()))
-                ts = datetime.fromtimestamp(closest[0] / 1000, tz=timezone.utc)
+                ts = datetime.fromtimestamp(closest[0] / 1000, tz=UTC)
                 return {
                     "source": "coingecko",
                     "symbol": symbol,
@@ -198,7 +198,7 @@ class CryptoPriceCurrent(BaseTool):
 
     async def execute(self, **kwargs) -> dict:
         symbol = kwargs.get("symbol", "BTCUSDT").upper()
-        now = datetime.now(tz=timezone.utc)
+        now = datetime.now(tz=UTC)
 
         # Priority 1: Yahoo Finance
         yahoo_sym = _YAHOO_SYMBOLS.get(symbol, symbol.replace("USDT", "-USD"))

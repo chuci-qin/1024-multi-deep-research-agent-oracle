@@ -9,7 +9,7 @@ API Version: v1 (Enhanced with full verification support)
 import os
 import uuid
 from contextlib import asynccontextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 # Load environment variables early
 from dotenv import load_dotenv
@@ -24,7 +24,6 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
 from oracle.core import MultiAgentOracle, OracleConfig
-from oracle.models import OracleResult
 
 logger = structlog.get_logger()
 
@@ -334,8 +333,8 @@ def create_app() -> FastAPI:
         4. Uploads to IPFS
         5. Returns CID and hash for on-chain storage
         """
-        from oracle.storage import OracleConfigData, IPFSStorage
         from oracle.agents.strategies import StrategyFactory
+        from oracle.storage import IPFSStorage, OracleConfigData
 
         try:
             # Build agent strategies
@@ -419,7 +418,7 @@ def create_app() -> FastAPI:
             cid: IPFS CID of the config
             expected_hash: Optional SHA256 hash to verify against
         """
-        from oracle.storage import IPFSStorage, to_canonical_json, calculate_sha256
+        from oracle.storage import IPFSStorage, calculate_sha256, to_canonical_json
 
         try:
             # Fetch from IPFS
@@ -622,7 +621,7 @@ async def _execute_resolution(
     
     # Use timezone-aware UTC timestamps for RFC 3339 compliance
     # (Rust backend parses with DateTime::parse_from_rfc3339 which requires timezone)
-    research_started_at = datetime.now(timezone.utc).isoformat()
+    research_started_at = datetime.now(UTC).isoformat()
     
     try:
         # Step 1: Run resolution
@@ -633,7 +632,7 @@ async def _execute_resolution(
             deadline=request.deadline,
         )
         
-        research_completed_at = datetime.now(timezone.utc).isoformat()
+        research_completed_at = datetime.now(UTC).isoformat()
         
         # Step 2: Build research data
         builder = OracleResearchDataBuilder(

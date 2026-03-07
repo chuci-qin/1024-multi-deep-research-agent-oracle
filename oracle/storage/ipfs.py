@@ -5,6 +5,7 @@ Stores research data on IPFS for transparency and verifiability.
 Supports Storacha (web3.storage w3up protocol) as the primary storage.
 """
 
+import contextlib
 import json
 import os
 import subprocess
@@ -341,11 +342,8 @@ class IPFSStorage:
             return cid
             
         finally:
-            # Clean up temp file
-            try:
+            with contextlib.suppress(OSError):
                 os.unlink(temp_path)
-            except OSError:
-                pass
 
     async def _upload_web3_storage(self, content: str, filename: str) -> str:
         """Upload to Web3.Storage (legacy API, deprecated)."""
@@ -466,7 +464,7 @@ class IPFSStorage:
         mock_dir = os.path.join(os.getcwd(), ".ipfs_mock")
         mock_path = os.path.join(mock_dir, f"{cid}.json")
         if os.path.exists(mock_path):
-            with open(mock_path, "r") as f:
+            with open(mock_path) as f:
                 return json.load(f)
 
         # Try fetching from IPFS gateways
