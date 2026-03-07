@@ -284,14 +284,16 @@ def create_app() -> FastAPI:
         if api_key != oracle_api_key:
             raise HTTPException(status_code=403, detail="Invalid or missing API key")
     
-    # CORS — restrict in production
-    cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8082").split(",")
+    # CORS — allow all 1024 platform origins + Vercel preview deployments
+    cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8082")
+    cors_origins = [o.strip() for o in cors_origins_str.split(",") if o.strip()]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[o.strip() for o in cors_origins],
+        allow_origins=cors_origins,
+        allow_origin_regex=r"https://(.*\.)?(1024ex\.com|1024chain\.com|vercel\.app)",
         allow_credentials=True,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-API-Key"],
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Content-Type", "X-API-Key", "Authorization"],
     )
     
     # ========================================================================
