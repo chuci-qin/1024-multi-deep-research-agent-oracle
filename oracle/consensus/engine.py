@@ -30,7 +30,9 @@ class ConsensusConfig(BaseModel):
     # Minimum VALID agents required to enter voting.
     # Read from MIN_VALID_AGENTS env (fallback MIN_AGENTS, default 2).
     # With 3 agents running, min_agents=2 allows 1 failure.
-    min_agents: int = Field(default_factory=_default_min_agents, description="Minimum valid agents required for voting")
+    min_agents: int = Field(
+        default_factory=_default_min_agents, description="Minimum valid agents required for voting"
+    )
 
     # Consensus threshold (0.67 = 2/3 majority)
     threshold: float = Field(default=0.67, ge=0.5, le=1.0)

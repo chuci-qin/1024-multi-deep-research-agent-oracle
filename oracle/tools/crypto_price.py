@@ -25,11 +25,21 @@ COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 
 # Yahoo Finance symbol mapping
 _YAHOO_SYMBOLS = {
-    "BTCUSDT": "BTC-USD", "ETHUSDT": "ETH-USD", "SOLUSDT": "SOL-USD",
-    "BNBUSDT": "BNB-USD", "XRPUSDT": "XRP-USD", "ADAUSDT": "ADA-USD",
-    "DOGEUSDT": "DOGE-USD", "AVAXUSDT": "AVAX-USD", "DOTUSDT": "DOT-USD",
-    "MATICUSDT": "MATIC-USD", "LINKUSDT": "LINK-USD", "UNIUSDT": "UNI-USD",
-    "ATOMUSDT": "ATOM-USD", "LTCUSDT": "LTC-USD", "FILUSDT": "FIL-USD",
+    "BTCUSDT": "BTC-USD",
+    "ETHUSDT": "ETH-USD",
+    "SOLUSDT": "SOL-USD",
+    "BNBUSDT": "BNB-USD",
+    "XRPUSDT": "XRP-USD",
+    "ADAUSDT": "ADA-USD",
+    "DOGEUSDT": "DOGE-USD",
+    "AVAXUSDT": "AVAX-USD",
+    "DOTUSDT": "DOT-USD",
+    "MATICUSDT": "MATIC-USD",
+    "LINKUSDT": "LINK-USD",
+    "UNIUSDT": "UNI-USD",
+    "ATOMUSDT": "ATOM-USD",
+    "LTCUSDT": "LTC-USD",
+    "FILUSDT": "FIL-USD",
 }
 
 
@@ -84,6 +94,7 @@ class CryptoPriceAtTimestamp(BaseTool):
         yahoo_sym = _YAHOO_SYMBOLS.get(symbol, symbol.replace("USDT", "-USD"))
         try:
             import yfinance as yf
+
             def _fetch():
                 ticker = yf.Ticker(yahoo_sym)
                 start = dt - timedelta(minutes=5)
@@ -120,7 +131,12 @@ class CryptoPriceAtTimestamp(BaseTool):
                 "volume": round(float(row["Volume"]), 2),
                 "time_diff_seconds": abs(candle_time.timestamp() - target_ts),
             }
-            logger.info("Yahoo Finance data fetched", symbol=yahoo_sym, close=result["close"], time=result["candle_time"])
+            logger.info(
+                "Yahoo Finance data fetched",
+                symbol=yahoo_sym,
+                close=result["close"],
+                time=result["candle_time"],
+            )
             return result
         except Exception as e:
             logger.warning("Yahoo Finance fetch failed", symbol=yahoo_sym, error=str(e))
@@ -204,13 +220,20 @@ class CryptoPriceCurrent(BaseTool):
         yahoo_sym = _YAHOO_SYMBOLS.get(symbol, symbol.replace("USDT", "-USD"))
         try:
             import yfinance as yf
+
             def _fetch():
                 ticker = yf.Ticker(yahoo_sym)
                 info = ticker.fast_info
                 return float(info.last_price)
+
             price = await asyncio.wait_for(asyncio.to_thread(_fetch), timeout=15.0)
             logger.info("Yahoo Finance current price", symbol=yahoo_sym, price=price)
-            return {"source": "yahoo_finance", "symbol": yahoo_sym, "price": round(price, 2), "timestamp": now.isoformat()}
+            return {
+                "source": "yahoo_finance",
+                "symbol": yahoo_sym,
+                "price": round(price, 2),
+                "timestamp": now.isoformat(),
+            }
         except Exception as e:
             logger.warning("Yahoo current price failed", error=str(e))
 
@@ -219,39 +242,64 @@ class CryptoPriceCurrent(BaseTool):
             data = await _fetch_json(f"{BINANCE_BASE}/api/v3/ticker/price?symbol={symbol}")
             price = float(data.get("price", 0))
             logger.info("Binance current price", symbol=symbol, price=price)
-            return {"source": "binance", "symbol": symbol, "price": price, "timestamp": now.isoformat()}
+            return {
+                "source": "binance",
+                "symbol": symbol,
+                "price": price,
+                "timestamp": now.isoformat(),
+            }
         except Exception as e:
             logger.warning("Binance ticker failed", error=str(e))
 
         # Priority 3: CoinGecko
         coin_id = _symbol_to_coingecko_id(symbol)
         try:
-            data = await _fetch_json(f"{COINGECKO_BASE}/simple/price?ids={coin_id}&vs_currencies=usd")
+            data = await _fetch_json(
+                f"{COINGECKO_BASE}/simple/price?ids={coin_id}&vs_currencies=usd"
+            )
             price = float(data.get(coin_id, {}).get("usd", 0))
-            return {"source": "coingecko", "symbol": symbol, "price": price, "timestamp": now.isoformat()}
+            return {
+                "source": "coingecko",
+                "symbol": symbol,
+                "price": price,
+                "timestamp": now.isoformat(),
+            }
         except Exception as e:
             return {"error": f"All sources failed for {symbol}: {e}"}
 
 
 # --- Helpers ---
 
+
 async def _fetch_json(url: str, timeout: int = 10) -> dict | list:
     """Fetch JSON from a URL using urllib (no external deps)."""
+
     def _do_fetch():
         req = urllib.request.Request(url, headers={"User-Agent": "1024-Oracle/1.0"})
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode())
+
     return await asyncio.to_thread(_do_fetch)
 
 
 def _symbol_to_coingecko_id(symbol: str) -> str:
     """Convert trading pair symbol to CoinGecko coin ID."""
     mapping = {
-        "BTC": "bitcoin", "ETH": "ethereum", "SOL": "solana",
-        "BNB": "binancecoin", "XRP": "ripple", "ADA": "cardano",
-        "DOGE": "dogecoin", "AVAX": "avalanche-2", "DOT": "polkadot",
-        "MATIC": "matic-network", "LINK": "chainlink", "UNI": "uniswap",
-        "ATOM": "cosmos", "LTC": "litecoin", "FIL": "filecoin",
+        "BTC": "bitcoin",
+        "ETH": "ethereum",
+        "SOL": "solana",
+        "BNB": "binancecoin",
+        "XRP": "ripple",
+        "ADA": "cardano",
+        "DOGE": "dogecoin",
+        "AVAX": "avalanche-2",
+        "DOT": "polkadot",
+        "MATIC": "matic-network",
+        "LINK": "chainlink",
+        "UNI": "uniswap",
+        "ATOM": "cosmos",
+        "LTC": "litecoin",
+        "FIL": "filecoin",
     }
     base = symbol.replace("USDT", "").replace("USDC", "").replace("USD", "").replace("-", "")
     return mapping.get(base, base.lower())

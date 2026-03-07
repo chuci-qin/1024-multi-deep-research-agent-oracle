@@ -4,14 +4,14 @@ Base Agent - Abstract base class for all research agents.
 
 import uuid
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 from oracle.models import AgentResult, ResearchSource
 
 
-class SearchStrategy(str, Enum):
+class SearchStrategy(StrEnum):
     """Research strategies for agents."""
 
     COMPREHENSIVE = "comprehensive"  # Broad search, many queries

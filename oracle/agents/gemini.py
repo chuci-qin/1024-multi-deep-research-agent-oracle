@@ -52,6 +52,7 @@ class GeminiDeepResearchAgent(BaseAgent):
                 creds_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
                 if creds_json and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
                     import tempfile
+
                     fd, creds_path = tempfile.mkstemp(suffix=".json", prefix="gcp-sa-")
                     with os.fdopen(fd, "w") as f:
                         f.write(creds_json)
@@ -117,7 +118,7 @@ class GeminiDeepResearchAgent(BaseAgent):
 
     async def _phase1_tool_calls(self, prompt: str) -> tuple[list[dict], list[ResearchSource]]:
         """Phase 1: Let Gemini decide whether to call data tools (Binance, etc.).
-        
+
         Uses function_declarations ONLY (no google_search — they can't coexist).
         Returns (tool_data_list, tool_sources) for injection into Phase 2.
         """
@@ -156,7 +157,11 @@ class GeminiDeepResearchAgent(BaseAgent):
         for round_num in range(3):
             if not response.candidates or len(response.candidates) == 0:
                 break
-            if not hasattr(response.candidates[0], 'content') or not response.candidates[0].content or not response.candidates[0].content.parts:
+            if (
+                not hasattr(response.candidates[0], "content")
+                or not response.candidates[0].content
+                or not response.candidates[0].content.parts
+            ):
                 break
 
             function_calls = [
@@ -168,25 +173,33 @@ class GeminiDeepResearchAgent(BaseAgent):
             if not function_calls:
                 break
 
-            logger.info("Phase 1: Gemini requested tools", round=round_num + 1, tools=[fc.name for fc in function_calls])
+            logger.info(
+                "Phase 1: Gemini requested tools",
+                round=round_num + 1,
+                tools=[fc.name for fc in function_calls],
+            )
 
             function_responses = []
             for fc in function_calls:
                 result = await self._execute_tool_call(fc)
-                tool_data.append({"tool": fc.name, "args": dict(fc.args) if fc.args else {}, "result": result})
+                tool_data.append(
+                    {"tool": fc.name, "args": dict(fc.args) if fc.args else {}, "result": result}
+                )
                 function_responses.append(
                     genai_types.Part.from_function_response(name=fc.name, response=result)
                 )
                 source_name = result.get("source", fc.name)
-                tool_sources.append(ResearchSource(
-                    url=f"api://{source_name}/{fc.name}",
-                    title=f"{fc.name} ({source_name})",
-                    snippet=json.dumps(result, default=str)[:500],
-                    category=SourceCategory.OFFICIAL,
-                    relevance_score=1.0,
-                    credibility_score=1.0,
-                    cited_by=[self.agent_id],
-                ))
+                tool_sources.append(
+                    ResearchSource(
+                        url=f"api://{source_name}/{fc.name}",
+                        title=f"{fc.name} ({source_name})",
+                        snippet=json.dumps(result, default=str)[:500],
+                        category=SourceCategory.OFFICIAL,
+                        relevance_score=1.0,
+                        credibility_score=1.0,
+                        cited_by=[self.agent_id],
+                    )
+                )
 
             conversation.append(response.candidates[0].content)
             conversation.append(genai_types.Content(role="user", parts=function_responses))

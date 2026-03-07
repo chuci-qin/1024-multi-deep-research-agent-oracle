@@ -76,6 +76,7 @@ class MultiAgentOracle:
 
         # Initialize consensus engine
         import os
+
         min_valid = int(os.getenv("MIN_VALID_AGENTS", "2"))
         threshold = float(os.getenv("CONSENSUS_THRESHOLD", "0.66"))
         self.consensus_engine = consensus_engine or ConsensusEngine(
@@ -111,11 +112,15 @@ class MultiAgentOracle:
         num_agents = int(os.getenv("MIN_AGENTS", str(self.config.num_agents)))
 
         # Collect all available API keys for distribution
-        api_keys = [k for k in [
-            os.getenv("GEMINI_API_KEY"),
-            os.getenv("GEMINI_API_KEY_2"),
-            os.getenv("GEMINI_API_KEY_3"),
-        ] if k]
+        api_keys = [
+            k
+            for k in [
+                os.getenv("GEMINI_API_KEY"),
+                os.getenv("GEMINI_API_KEY_2"),
+                os.getenv("GEMINI_API_KEY_3"),
+            ]
+            if k
+        ]
 
         if not api_keys:
             logger.error("No GEMINI_API_KEY configured!")
@@ -131,7 +136,7 @@ class MultiAgentOracle:
                 strategy=strategy,
                 model=model,
             )
-            logger.info(f"Agent {i+1} → key={key_suffix}, strategy={strategy.value}")
+            logger.info(f"Agent {i + 1} → key={key_suffix}, strategy={strategy.value}")
             agents.append(agent)
 
         return agents
@@ -190,11 +195,13 @@ class MultiAgentOracle:
 
             if valid_count >= min_valid:
                 if attempt > 0:
-                    logger.info(f"✅ Retry succeeded on attempt {attempt + 1}/{max_retries}: {valid_count} valid agents")
+                    logger.info(
+                        f"✅ Retry succeeded on attempt {attempt + 1}/{max_retries}: {valid_count} valid agents"
+                    )
                 break
 
             if attempt < max_retries - 1:
-                delay = min(retry_base_delay * (2 ** attempt), 30)
+                delay = min(retry_base_delay * (2**attempt), 30)
                 failed_errors = [r.error for r in agent_results if r.error]
                 logger.warning(
                     f"⚠️ Attempt {attempt + 1}/{max_retries}: only {valid_count}/{len(agent_results)} valid agents. "

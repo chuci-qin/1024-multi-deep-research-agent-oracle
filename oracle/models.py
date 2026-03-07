@@ -5,12 +5,12 @@ These models define the core data structures used throughout the oracle system.
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class Outcome(str, Enum):
+class Outcome(StrEnum):
     """Possible outcomes for a prediction market resolution."""
 
     YES = "YES"
@@ -19,7 +19,7 @@ class Outcome(str, Enum):
     INVALID = "INVALID"
 
 
-class SourceCategory(str, Enum):
+class SourceCategory(StrEnum):
     """Categories for research sources."""
 
     OFFICIAL = "official"  # .gov, company websites, press releases

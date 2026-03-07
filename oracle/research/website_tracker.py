@@ -8,7 +8,7 @@ Task ID: 2.3.1 - 2.3.7 from IMPLEMENTATION-TRACKER.md
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from urllib.parse import urlparse
 
 import structlog
@@ -17,7 +17,7 @@ from pydantic import BaseModel, Field
 logger = structlog.get_logger()
 
 
-class CredibilityTier(str, Enum):
+class CredibilityTier(StrEnum):
     """Credibility tiers for source domains."""
 
     TIER_1 = "tier_1"  # Highest: .gov, major wire services (0.9-1.0)
@@ -27,7 +27,7 @@ class CredibilityTier(str, Enum):
     TIER_5 = "tier_5"  # Unverified: unknown sources (0.0-0.29)
 
 
-class SourceType(str, Enum):
+class SourceType(StrEnum):
     """Types of sources."""
 
     OFFICIAL = "official"  # Government, regulatory bodies

@@ -8,7 +8,7 @@ Task ID: 2.2.1 - 2.2.7 from IMPLEMENTATION-TRACKER.md
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 import structlog
 from pydantic import BaseModel, Field
@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 logger = structlog.get_logger()
 
 
-class ThinkingStepType(str, Enum):
+class ThinkingStepType(StrEnum):
     """Types of thinking steps during research."""
 
     # Research initiation

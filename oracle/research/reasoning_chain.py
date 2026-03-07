@@ -8,7 +8,7 @@ Task ID: 2.4.1 - 2.4.7 from IMPLEMENTATION-TRACKER.md
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 import structlog
 from pydantic import BaseModel, Field
@@ -16,7 +16,7 @@ from pydantic import BaseModel, Field
 logger = structlog.get_logger()
 
 
-class ReasoningStepType(str, Enum):
+class ReasoningStepType(StrEnum):
     """Types of reasoning steps."""
 
     # Task 2.4.4: Observation type

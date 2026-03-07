@@ -52,7 +52,7 @@ class IPFSConfig(BaseModel):
 
     # Timeout
     timeout_seconds: int = Field(default=60)
-    
+
     # Enable CLI upload via storacha CLI (recommended for production)
     use_cli: bool = Field(default=True, description="Use storacha CLI for upload")
 
@@ -79,13 +79,13 @@ class IPFSStorage:
         )
 
         self.client = httpx.AsyncClient(timeout=self.config.timeout_seconds)
-        
+
         # Check if storacha CLI is available and configured
         self._storacha_cli_available = self._check_storacha_cli()
-        
+
         # Determine if real IPFS is available
         has_real_ipfs = (
-            self._storacha_cli_available 
+            self._storacha_cli_available
             or bool(self.config.web3_storage_token)
             or bool(self.config.pinata_api_key)
         )
@@ -99,7 +99,7 @@ class IPFSStorage:
             use_cli=self.config.use_cli,
             real_ipfs_available=has_real_ipfs,
         )
-        
+
         if not has_real_ipfs:
             logger.warning(
                 "⚠️ No real IPFS provider configured! Using mock storage.\n"
@@ -107,7 +107,7 @@ class IPFSStorage:
                 "   For production, please configure Storacha:"
             )
             print(self.get_setup_instructions())
-    
+
     def _check_storacha_cli(self) -> bool:
         """Check if storacha CLI is installed and configured."""
         try:
@@ -120,9 +120,9 @@ class IPFSStorage:
             )
             if result.returncode != 0:
                 return False
-                
+
             logger.info(f"Storacha CLI available: {result.stdout.strip()}")
-            
+
             # Check if space is configured and has a provider
             space_info = subprocess.run(
                 ["storacha", "space", "info"],
@@ -130,7 +130,7 @@ class IPFSStorage:
                 text=True,
                 timeout=10,
             )
-            
+
             if "Providers: none" in space_info.stdout:
                 logger.warning(
                     "⚠️ Storacha space has no storage provider configured!\n"
@@ -140,13 +140,13 @@ class IPFSStorage:
                     "   Using mock storage for now."
                 )
                 return False
-            
+
             return True
-            
+
         except (FileNotFoundError, subprocess.TimeoutExpired) as e:
             logger.warning(f"Storacha CLI not available: {e}")
         return False
-    
+
     def get_setup_instructions(self) -> str:
         """Get instructions for setting up Storacha."""
         return """
@@ -273,7 +273,7 @@ class IPFSStorage:
     async def _upload_storacha_cli(self, content: str, filename: str) -> str:
         """
         Upload to Storacha using the CLI tool.
-        
+
         Requires:
         1. npm install -g @storacha/cli
         2. storacha login (one-time authentication)
@@ -281,22 +281,19 @@ class IPFSStorage:
         """
         import asyncio
         import tempfile
-        
+
         # Write content to a temporary file
         with tempfile.NamedTemporaryFile(
-            mode="w", 
-            suffix=".json", 
-            delete=False,
-            prefix="oracle-"
+            mode="w", suffix=".json", delete=False, prefix="oracle-"
         ) as f:
             f.write(content)
             temp_path = f.name
-        
+
         try:
             # Use storacha CLI to upload
             # First, ensure we're using the correct space
             space_did = self.config.storacha_space_did
-            
+
             # Select the space (if configured)
             if space_did:
                 space_result = await asyncio.to_thread(
@@ -308,7 +305,7 @@ class IPFSStorage:
                 )
                 if space_result.returncode != 0 and "already" not in space_result.stderr.lower():
                     logger.warning(f"Space selection warning: {space_result.stderr}")
-            
+
             # Upload the file
             result = await asyncio.to_thread(
                 subprocess.run,
@@ -317,10 +314,10 @@ class IPFSStorage:
                 text=True,
                 timeout=120,
             )
-            
+
             if result.returncode != 0:
                 raise Exception(f"Storacha CLI upload failed: {result.stderr}")
-            
+
             # Parse the JSON output to get the CID
             try:
                 output = json.loads(result.stdout)
@@ -331,16 +328,16 @@ class IPFSStorage:
             except json.JSONDecodeError:
                 # Fallback: extract CID from plain text output
                 cid = result.stdout.strip().split()[-1]
-            
+
             logger.info(
                 "Uploaded to Storacha via CLI",
                 filename=filename,
                 cid=cid,
                 space_did=space_did[:20] + "..." if space_did else None,
             )
-            
+
             return cid
-            
+
         finally:
             with contextlib.suppress(OSError):
                 os.unlink(temp_path)

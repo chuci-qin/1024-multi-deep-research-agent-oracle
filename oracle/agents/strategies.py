@@ -7,7 +7,7 @@ independent and comprehensive research from multiple angles.
 Task ID: 2.6.1 - 2.6.7 from IMPLEMENTATION-TRACKER.md
 """
 
-from enum import Enum
+from enum import StrEnum
 
 import structlog
 from pydantic import BaseModel, Field
@@ -17,7 +17,7 @@ from oracle.agents.base import AgentConfig, SearchStrategy
 logger = structlog.get_logger()
 
 
-class StrategyProfile(str, Enum):
+class StrategyProfile(StrEnum):
     """
     Predefined strategy profiles for agent differentiation.
 
