@@ -980,9 +980,7 @@ async def _execute_multi_outcome_resolution(
         ]
         strict_consensus, provable_data = strict_engine.calculate_strict(binary_results_for_strict)
 
-        # Map outcome to the format the Rust backend expects
         winning = result.consensus.winning_outcome
-        outcome_str = winning.outcome_label if winning.is_determined else "UNDETERMINED"
 
         return MultiOutcomeResultResponse(
             request_id=request_id,

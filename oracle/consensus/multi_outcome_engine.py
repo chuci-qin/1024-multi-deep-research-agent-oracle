@@ -90,7 +90,7 @@ class MultiOutcomeConsensusEngine:
         # N+1 bins: each outcome label + "UNDETERMINED"
         bins: dict[str, list[MultiOutcomeAgentResult]] = {label: [] for label in outcome_labels}
         bins["UNDETERMINED"] = []
-        weights: dict[str, float] = {label: 0.0 for label in outcome_labels}
+        weights: dict[str, float] = dict.fromkeys(outcome_labels, 0.0)
         weights["UNDETERMINED"] = 0.0
 
         for result in valid_results:

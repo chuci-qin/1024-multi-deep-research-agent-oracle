@@ -16,7 +16,13 @@ from google import genai  # New SDK
 from google.genai import types as genai_types
 
 from oracle.agents.base import AgentConfig, BaseAgent, SearchStrategy
-from oracle.models import AgentResult, MultiOutcome, MultiOutcomeAgentResult, Outcome, ResearchSource, SourceCategory
+from oracle.models import (
+    AgentResult,
+    MultiOutcomeAgentResult,
+    Outcome,
+    ResearchSource,
+    SourceCategory,
+)
 from oracle.tools import get_all_tools, get_tool
 
 logger = structlog.get_logger()

@@ -15,12 +15,13 @@ from pydantic import BaseModel, Field
 
 from oracle.agents import BaseAgent, GeminiDeepResearchAgent, SearchStrategy
 from oracle.consensus import ConsensusConfig, ConsensusEngine
-from oracle.consensus.multi_outcome_engine import MultiOutcomeConsensusConfig, MultiOutcomeConsensusEngine
+from oracle.consensus.multi_outcome_engine import (
+    MultiOutcomeConsensusConfig,
+    MultiOutcomeConsensusEngine,
+)
 from oracle.models import (
     AgentResult,
-    MultiOutcome,
     MultiOutcomeAgentResult,
-    MultiOutcomeConsensusResult,
     MultiOutcomeOracleResult,
     OracleRequest,
     OracleResult,
