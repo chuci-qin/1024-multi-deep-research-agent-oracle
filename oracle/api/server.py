@@ -35,7 +35,7 @@ logger = structlog.get_logger()
 
 class ResolutionRequest(BaseModel):
     """
-    Request to resolve a prediction market question.
+    Request to resolve a prediction market question (binary: YES/NO).
 
     Supports full verification with oracle config and on-chain hashes.
     """
@@ -58,6 +58,31 @@ class ResolutionRequest(BaseModel):
     agent_count: int | None = Field(None, description="Number of agents (default: 5)")
     consensus_threshold: float | None = Field(
         None, ge=0.5, le=1.0, description="Consensus threshold (default: 0.67)"
+    )
+
+
+class MultiOutcomeResolutionRequest(BaseModel):
+    """
+    Request to resolve a multi-outcome prediction market question.
+
+    Unlike binary resolution, this accepts a list of outcome labels
+    and returns the winning outcome index.
+    """
+
+    market_id: int = Field(..., description="Prediction market ID")
+    question: str = Field(..., description="Question to resolve")
+    resolution_criteria: str = Field(..., description="Criteria for resolution")
+    outcomes: list[str] = Field(..., min_length=2, description="List of possible outcome labels")
+    num_outcomes: int = Field(..., ge=2, description="Number of outcomes")
+    deadline: str | None = Field(None, description="Resolution deadline")
+    callback_url: str | None = Field(None, description="Webhook callback URL")
+
+    oracle_config_cid: str | None = Field(None, description="IPFS CID of oracle config")
+    oracle_config_hash: str | None = Field(None, description="SHA256 hash of oracle config")
+
+    agent_count: int | None = Field(None, description="Number of agents (default: 5)")
+    consensus_threshold: float | None = Field(
+        None, ge=0.5, le=1.0, description="Consensus threshold (default: 0.80 for multi-outcome)"
     )
 
 
@@ -122,6 +147,58 @@ class ResultResponse(BaseModel):
     research_completed_at: str | None = None
 
     # IPFS storage indicator (false = real IPFS, true = local mock storage)
+    ipfs_mock: bool = False
+
+
+class MultiOutcomeResultResponse(BaseModel):
+    """
+    Oracle result response for multi-outcome markets.
+
+    Returns the winning outcome index instead of YES/NO.
+    """
+
+    request_id: str
+    market_id: int
+    status: str
+
+    # Multi-outcome result
+    outcome_index: int | None = None
+    outcome_label: str | None = None
+    outcomes: list[str] | None = None
+    vote_distribution: dict[str, int] | None = None
+
+    # Shared fields
+    confidence: float | None = None
+    agreement_ratio: float | None = None
+    weighted_ratio: float | None = None
+
+    consensus_reached: bool | None = None
+    agent_count: int | None = None
+    valid_agent_count: int | None = None
+
+    total_sources: int | None = None
+    unique_sources: int | None = None
+    tier1_sources: int | None = None
+    tier2_sources: int | None = None
+
+    oracle_config_cid: str | None = None
+    oracle_config_hash: str | None = None
+    research_data_cid: str | None = None
+    research_data_hash: str | None = None
+
+    verification_passed: bool | None = None
+    verification_issues: list[str] | None = None
+
+    requires_manual_review: bool | None = None
+    review_reason: str | None = None
+
+    disagreement_analysis: dict | None = None
+
+    error: str | None = None
+
+    research_started_at: str | None = None
+    research_completed_at: str | None = None
+
     ipfs_mock: bool = False
 
 
@@ -583,6 +660,46 @@ def create_app() -> FastAPI:
             logger.error(f"Resolution failed: {e}")
             raise HTTPException(status_code=500, detail=str(e)) from e
 
+    # ========================================================================
+    # Multi-Outcome Resolution Endpoints
+    # ========================================================================
+
+    @app.post(
+        "/api/v1/resolve-multi/sync",
+        response_model=MultiOutcomeResultResponse,
+        dependencies=[Depends(verify_api_key)],
+    )
+    async def resolve_multi_sync(request: MultiOutcomeResolutionRequest):
+        """
+        Synchronously resolve a multi-outcome prediction market question.
+
+        Accepts a list of outcome labels and returns the winning outcome index.
+        Uses MultiOutcomeConsensusEngine with N+1 bins (outcomes + UNDETERMINED).
+        Default consensus threshold is 0.80 (4/5) for multi-outcome markets.
+        """
+        if not api_instance.oracle:
+            raise HTTPException(status_code=503, detail="Oracle not initialized")
+
+        if len(request.outcomes) != request.num_outcomes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"outcomes length ({len(request.outcomes)}) must match num_outcomes ({request.num_outcomes})",
+            )
+
+        try:
+            request_id = f"req_{uuid.uuid4().hex[:12]}"
+
+            result = await _execute_multi_outcome_resolution(
+                request_id,
+                request,
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error(f"Multi-outcome resolution failed: {e}")
+            raise HTTPException(status_code=500, detail=str(e)) from e
+
     return app
 
 
@@ -757,6 +874,174 @@ async def _send_webhook(url: str, result: ResultResponse):
         logger.info(f"Webhook sent to {url}")
     except Exception as e:
         logger.error(f"Webhook failed: {e}")
+
+
+async def _execute_multi_outcome_resolution(
+    request_id: str,
+    request: MultiOutcomeResolutionRequest,
+) -> MultiOutcomeResultResponse:
+    """Execute multi-outcome resolution with full verification data."""
+    from oracle.agents import StrategyFactory
+    from oracle.consensus import StrictConsensusConfig, StrictConsensusEngine
+    from oracle.storage import OracleResearchDataBuilder
+
+    if not api_instance.oracle:
+        return MultiOutcomeResultResponse(
+            request_id=request_id,
+            market_id=request.market_id,
+            status="failed",
+            error="Oracle not initialized",
+        )
+
+    research_started_at = datetime.now(UTC).isoformat()
+
+    try:
+        threshold = request.consensus_threshold or float(
+            os.getenv("MULTI_OUTCOME_CONSENSUS_THRESHOLD", "0.80")
+        )
+
+        result = await api_instance.oracle.resolve_multi_outcome(
+            question=request.question,
+            resolution_criteria=request.resolution_criteria,
+            outcomes=request.outcomes,
+            market_id=request.market_id,
+            deadline=request.deadline,
+            consensus_threshold=threshold,
+        )
+
+        research_completed_at = datetime.now(UTC).isoformat()
+
+        # Build research data for hashing
+        builder = OracleResearchDataBuilder(
+            market_id=request.market_id,
+            question=request.question,
+            resolution_criteria=request.resolution_criteria,
+            deadline=request.deadline,
+        )
+        builder.research_started_at = research_started_at
+        builder.research_completed_at = research_completed_at
+
+        # Convert multi-outcome results to binary AgentResults for storage compatibility
+        from oracle.models import AgentResult, ConsensusResult, Outcome
+
+        for ar in result.agent_results:
+            binary_ar = AgentResult(
+                agent_id=ar.agent_id,
+                model=ar.model,
+                strategy=ar.strategy,
+                outcome=Outcome.YES if ar.outcome_index >= 0 else Outcome.UNDETERMINED,
+                confidence=ar.confidence,
+                reasoning=f"[Multi-outcome: {ar.outcome_label} (index={ar.outcome_index})] {ar.reasoning}",
+                sources=ar.sources,
+            )
+            builder.add_agent_result(binary_ar)
+
+        binary_consensus = ConsensusResult(
+            reached=result.consensus.reached,
+            outcome=Outcome.YES if result.consensus.winning_outcome.is_determined else Outcome.UNDETERMINED,
+            confidence=result.consensus.confidence,
+            agreement_ratio=result.consensus.agreement_ratio,
+            weighted_ratio=result.consensus.weighted_ratio,
+            agent_count=result.consensus.agent_count,
+        )
+        builder.set_consensus(binary_consensus)
+        builder.set_merged_sources(result.merged_sources)
+
+        agent_count = request.agent_count or 5
+        strategies = [p.value for p in StrategyFactory.get_recommended_profiles(agent_count)]
+
+        oracle_config = builder.build_config(
+            agent_count=agent_count,
+            agent_strategies=strategies,
+            consensus_threshold=threshold,
+        )
+
+        _, config_hash = oracle_config.get_hash_data()
+
+        research_data = builder.build()
+        _, research_hash = research_data.get_hash_data()
+
+        # Run strict consensus for verification data
+        strict_engine = StrictConsensusEngine(
+            config=StrictConsensusConfig(threshold=threshold)
+        )
+
+        binary_results_for_strict = [
+            AgentResult(
+                agent_id=ar.agent_id,
+                model=ar.model,
+                strategy=ar.strategy,
+                outcome=Outcome.YES if ar.outcome_index >= 0 else Outcome.UNDETERMINED,
+                confidence=ar.confidence,
+                reasoning=ar.reasoning,
+                sources=ar.sources,
+            )
+            for ar in result.agent_results
+        ]
+        strict_consensus, provable_data = strict_engine.calculate_strict(binary_results_for_strict)
+
+        # Map outcome to the format the Rust backend expects
+        winning = result.consensus.winning_outcome
+        outcome_str = winning.outcome_label if winning.is_determined else "UNDETERMINED"
+
+        return MultiOutcomeResultResponse(
+            request_id=request_id,
+            market_id=request.market_id,
+            status="completed",
+            outcome_index=winning.outcome_index if winning.is_determined else None,
+            outcome_label=winning.outcome_label,
+            outcomes=request.outcomes,
+            vote_distribution=result.consensus.vote_distribution,
+            confidence=result.consensus.confidence,
+            agreement_ratio=result.consensus.agreement_ratio,
+            weighted_ratio=result.consensus.weighted_ratio,
+            consensus_reached=result.consensus.reached,
+            agent_count=len(result.agent_results),
+            valid_agent_count=sum(1 for r in result.agent_results if r.is_valid),
+            total_sources=sum(len(r.sources) for r in result.agent_results),
+            unique_sources=len(result.merged_sources),
+            tier1_sources=provable_data.verification.tier1_sources,
+            tier2_sources=provable_data.verification.tier2_sources,
+            oracle_config_cid=request.oracle_config_cid,
+            oracle_config_hash=config_hash,
+            research_data_cid=result.ipfs_cid,
+            research_data_hash=research_hash,
+            verification_passed=provable_data.verification.passed,
+            verification_issues=provable_data.verification.issues,
+            requires_manual_review=(
+                result.consensus.requires_human_review
+                or (
+                    provable_data.disagreement and provable_data.disagreement.requires_manual_review
+                )
+            ),
+            review_reason=(
+                result.consensus.reason
+                or (provable_data.disagreement.review_reason if provable_data.disagreement else None)
+            ),
+            disagreement_analysis=(
+                provable_data.disagreement.model_dump()
+                if provable_data.disagreement and provable_data.disagreement.has_disagreement
+                else None
+            ),
+            research_started_at=research_started_at,
+            research_completed_at=research_completed_at,
+            ipfs_mock=(
+                result.ipfs_cid is None
+                or not result.ipfs_cid
+                or os.path.exists(
+                    os.path.join(os.getcwd(), ".ipfs_mock", f"{result.ipfs_cid}.json")
+                )
+            ),
+        )
+
+    except Exception as e:
+        logger.error(f"Multi-outcome resolution execution failed: {e}")
+        return MultiOutcomeResultResponse(
+            request_id=request_id,
+            market_id=request.market_id,
+            status="failed",
+            error=str(e),
+        )
 
 
 # Create global app instance for uvicorn

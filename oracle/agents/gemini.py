@@ -16,7 +16,7 @@ from google import genai  # New SDK
 from google.genai import types as genai_types
 
 from oracle.agents.base import AgentConfig, BaseAgent, SearchStrategy
-from oracle.models import AgentResult, Outcome, ResearchSource, SourceCategory
+from oracle.models import AgentResult, MultiOutcome, MultiOutcomeAgentResult, Outcome, ResearchSource, SourceCategory
 from oracle.tools import get_all_tools, get_tool
 
 logger = structlog.get_logger()
@@ -577,6 +577,229 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
         except Exception as e:
             logger.warning(f"Error parsing response: {e}")
             return Outcome.UNDETERMINED, 0.0, str(e)
+
+    async def research_multi_outcome(
+        self,
+        question: str,
+        resolution_criteria: str,
+        outcomes: list[str],
+        deadline: str | None = None,
+    ) -> MultiOutcomeAgentResult:
+        """
+        Two-phase research for multi-outcome markets.
+        Same Phase 1 (tool calls) + Phase 2 (Google Search) pattern,
+        but with a prompt that lists all outcomes and expects an outcome index.
+        """
+        start_time = time.time()
+
+        if not self._initialized or not self.client:
+            return MultiOutcomeAgentResult(
+                agent_id=self.agent_id,
+                model=self.model_name,
+                strategy=self.strategy.value,
+                outcome_index=-1,
+                outcome_label="UNDETERMINED",
+                confidence=0.0,
+                reasoning="Agent not initialized - missing API key",
+                sources=[],
+                error="GEMINI_API_KEY not configured",
+            )
+
+        logger.info("Starting multi-outcome research", agent_id=self.agent_id, question=question[:100], num_outcomes=len(outcomes))
+
+        try:
+            prompt = self._build_multi_outcome_prompt(question, resolution_criteria, outcomes, deadline)
+
+            # Phase 1: Tool Calls
+            tool_data, tool_sources = await self._phase1_tool_calls(prompt)
+
+            if tool_data:
+                data_block = "\n\n=== VERIFIED API DATA (from Phase 1 tool calls) ===\n"
+                for td in tool_data:
+                    data_block += f"\nTool: {td['tool']}({json.dumps(td['args'], default=str)})\n"
+                    data_block += f"Result: {json.dumps(td['result'], default=str)}\n"
+                data_block += "\nUse this verified API data as your PRIMARY evidence. It is more reliable than web search results.\n"
+                data_block += "=== END VERIFIED API DATA ===\n"
+                prompt = prompt + data_block
+
+            # Phase 2: Google Search
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=self._model_name,
+                contents=prompt,
+                config={
+                    "tools": [{"google_search": {}}],
+                    "temperature": self.config.temperature,
+                    "max_output_tokens": self.config.max_tokens,
+                },
+            )
+
+            sources = self._extract_sources(response) + tool_sources
+            outcome_index, outcome_label, confidence, reasoning = self._parse_multi_outcome_response(response, outcomes)
+
+            duration = time.time() - start_time
+
+            result = MultiOutcomeAgentResult(
+                agent_id=self.agent_id,
+                model=self.model_name,
+                strategy=self.strategy.value,
+                outcome_index=outcome_index,
+                outcome_label=outcome_label,
+                confidence=confidence,
+                reasoning=reasoning,
+                sources=sources,
+                research_duration_seconds=duration,
+            )
+
+            logger.info(
+                "Multi-outcome research completed",
+                agent_id=self.agent_id,
+                outcome_index=outcome_index,
+                outcome_label=outcome_label,
+                confidence=confidence,
+                source_count=len(sources),
+                duration=f"{duration:.2f}s",
+            )
+            return result
+
+        except Exception as e:
+            logger.error("Multi-outcome research failed", agent_id=self.agent_id, error=str(e))
+            return MultiOutcomeAgentResult(
+                agent_id=self.agent_id,
+                model=self.model_name,
+                strategy=self.strategy.value,
+                outcome_index=-1,
+                outcome_label="UNDETERMINED",
+                confidence=0.0,
+                reasoning="Research failed due to error",
+                sources=[],
+                research_duration_seconds=time.time() - start_time,
+                error=str(e),
+            )
+
+    def _build_multi_outcome_prompt(
+        self,
+        question: str,
+        resolution_criteria: str,
+        outcomes: list[str],
+        deadline: str | None = None,
+    ) -> str:
+        """Build prompt for multi-outcome markets that lists all outcomes with their indices."""
+        deadline_block = ""
+        if deadline:
+            deadline_block = f"""
+RESOLUTION TIMESTAMP: {deadline}
+
+*** TIME-AWARE RESOLUTION RULES ***
+This prediction market resolves based on conditions at or near the timestamp above.
+Find evidence as close to the resolution timestamp as possible.
+"""
+
+        outcomes_block = "POSSIBLE OUTCOMES:\n"
+        for i, label in enumerate(outcomes):
+            outcomes_block += f"  [{i}] {label}\n"
+
+        strategy_instruction = {
+            SearchStrategy.COMPREHENSIVE: "Search comprehensively across multiple source types.",
+            SearchStrategy.FOCUSED: "Focus on the most authoritative and time-precise sources.",
+            SearchStrategy.DIVERSE: "Gather diverse perspectives from different source types.",
+        }.get(self.strategy, "Search for relevant information.")
+
+        return f"""You are an AI oracle for a prediction market with MULTIPLE OUTCOMES. Your task is to determine which outcome is correct based on VERIFIABLE evidence.
+
+QUESTION: {question}
+
+RESOLUTION CRITERIA: {resolution_criteria}
+{deadline_block}
+{outcomes_block}
+
+RESEARCH INSTRUCTIONS:
+{strategy_instruction}
+
+Search the web thoroughly using Google Search. Gather evidence from multiple sources.
+
+After researching, provide your determination in the following JSON format:
+
+```json
+{{
+    "outcome_index": <integer index from the POSSIBLE OUTCOMES list above, or -1 if UNDETERMINED>,
+    "outcome_label": "<exact label text from the list above, or UNDETERMINED>",
+    "confidence": 0.0 to 1.0,
+    "reasoning": "Your detailed reasoning with evidence and source URLs",
+    "key_facts": ["fact1 (source)", "fact2 (source)", "fact3 (source)"]
+}}
+```
+
+IMPORTANT:
+- outcome_index MUST be one of the indices listed above, or -1 if you cannot determine the answer.
+- outcome_label MUST exactly match the label text from the list, or be "UNDETERMINED".
+- Only use UNDETERMINED when the evidence is genuinely insufficient or conflicting.
+- Be precise and base your answer on factual evidence from your search results.
+"""
+
+    def _parse_multi_outcome_response(
+        self,
+        response,
+        outcomes: list[str],
+    ) -> tuple[int, str, float, str]:
+        """Parse Gemini response for multi-outcome resolution.
+
+        Returns (outcome_index, outcome_label, confidence, reasoning).
+        Unmapped labels → UNDETERMINED (-1).
+        """
+        try:
+            text = response.text if response.text else ""
+
+            json_match = None
+            if "```json" in text:
+                start = text.find("```json") + 7
+                end = text.find("```", start)
+                if end > start:
+                    json_match = text[start:end].strip()
+            elif "{" in text and "}" in text:
+                start = text.find("{")
+                end = text.rfind("}") + 1
+                json_match = text[start:end]
+
+            if json_match:
+                try:
+                    data = json.loads(json_match)
+
+                    outcome_index = int(data.get("outcome_index", -1))
+                    outcome_label = data.get("outcome_label", "UNDETERMINED")
+                    confidence = float(data.get("confidence", 0.5))
+                    reasoning = data.get("reasoning", text[:500])
+
+                    # Validate outcome_index is within range
+                    if 0 <= outcome_index < len(outcomes):
+                        # Cross-check label matches the index
+                        if outcomes[outcome_index].upper() != outcome_label.upper():
+                            # Trust the index if valid, use its label
+                            outcome_label = outcomes[outcome_index]
+                        return outcome_index, outcome_label, confidence, reasoning
+
+                    # Try to match by label if index is invalid
+                    label_upper = outcome_label.upper()
+                    for i, candidate in enumerate(outcomes):
+                        if candidate.upper() == label_upper:
+                            return i, candidate, confidence, reasoning
+
+                    # Unmapped → UNDETERMINED
+                    return -1, "UNDETERMINED", confidence, reasoning
+                except (json.JSONDecodeError, ValueError):
+                    pass
+
+            # Fallback: try to find an outcome label in the text
+            text_upper = text.upper()
+            for i, label in enumerate(outcomes):
+                if label.upper() in text_upper:
+                    return i, label, 0.6, text[:500]
+
+            return -1, "UNDETERMINED", 0.3, text[:500]
+
+        except Exception as e:
+            logger.warning(f"Error parsing multi-outcome response: {e}")
+            return -1, "UNDETERMINED", 0.0, str(e)
 
     async def close(self):
         """Cleanup resources."""
