@@ -565,18 +565,22 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
                 except json.JSONDecodeError:
                     pass
 
-            # Fallback: parse from text
-            text_lower = text.lower()
+            import re
+            text_lower = text.lower().strip()
+            first_line = text_lower.split('\n')[0].strip()
 
-            if "yes" in text_lower and "no" not in text_lower[:100]:
+            yes_match = bool(re.search(r'\byes\b', first_line))
+            no_match = bool(re.search(r'\bno\b', first_line))
+
+            if yes_match and not no_match:
                 outcome = Outcome.YES
-                confidence = 0.7
-            elif "no" in text_lower and "yes" not in text_lower[:100]:
+                confidence = 0.6
+            elif no_match and not yes_match:
                 outcome = Outcome.NO
-                confidence = 0.7
+                confidence = 0.6
             else:
                 outcome = Outcome.UNDETERMINED
-                confidence = 0.5
+                confidence = 0.3
 
             return outcome, confidence, text[:500]
 

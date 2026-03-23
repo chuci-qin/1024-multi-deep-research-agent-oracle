@@ -314,7 +314,7 @@ class OracleResearchDataBuilder:
         self,
         agent_count: int,
         agent_strategies: list[str],
-        consensus_threshold: float = 0.67,
+        consensus_threshold: float = 0.66,
         min_sources_per_agent: int = 50,
         min_source_categories: int = 5,
     ) -> OracleConfigData:

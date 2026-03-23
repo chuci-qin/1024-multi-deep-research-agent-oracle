@@ -37,7 +37,7 @@ class StrictConsensusConfig(ConsensusConfig):
     """
 
     # Enhanced threshold (default 2/3 supermajority)
-    threshold: float = Field(default=0.67, ge=0.5, le=1.0)
+    threshold: float = Field(default=0.66, ge=0.5, le=1.0)
 
     # Strict source requirements
     min_tier1_sources: int = Field(

@@ -246,7 +246,7 @@ def config():
             "env",
         ),
         ("MIN_AGENTS", os.getenv("MIN_AGENTS", "3"), "env"),
-        ("CONSENSUS_THRESHOLD", os.getenv("CONSENSUS_THRESHOLD", "0.67"), "env"),
+        ("CONSENSUS_THRESHOLD", os.getenv("CONSENSUS_THRESHOLD", "0.66"), "env"),
     ]
 
     for name, value, source in config_items:

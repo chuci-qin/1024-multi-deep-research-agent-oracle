@@ -34,8 +34,8 @@ class ConsensusConfig(BaseModel):
         default_factory=_default_min_agents, description="Minimum valid agents required for voting"
     )
 
-    # Consensus threshold (0.67 = 2/3 majority)
-    threshold: float = Field(default=0.67, ge=0.5, le=1.0)
+    # Consensus threshold (0.66 = 2/3 majority with 3 agents)
+    threshold: float = Field(default=0.66, ge=0.5, le=1.0)
 
     # Minimum confidence for valid result
     min_confidence: float = Field(default=0.5, ge=0.0, le=1.0)

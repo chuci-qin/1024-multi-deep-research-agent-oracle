@@ -41,8 +41,8 @@ class ResolutionRequest(BaseModel):
     """
 
     market_id: int = Field(..., description="Prediction market ID")
-    question: str = Field(..., description="Question to resolve")
-    resolution_criteria: str = Field(..., description="Criteria for resolution")
+    question: str = Field(..., max_length=2000, description="Question to resolve")
+    resolution_criteria: str = Field(..., max_length=5000, description="Criteria for resolution")
     deadline: str | None = Field(None, description="Resolution deadline")
     callback_url: str | None = Field(None, description="Webhook callback URL")
 
@@ -57,7 +57,7 @@ class ResolutionRequest(BaseModel):
     # Agent configuration (optional, defaults to standard)
     agent_count: int | None = Field(None, description="Number of agents (default: 5)")
     consensus_threshold: float | None = Field(
-        None, ge=0.5, le=1.0, description="Consensus threshold (default: 0.67)"
+        None, ge=0.5, le=1.0, description="Consensus threshold (default: 0.66)"
     )
 
 
@@ -70,10 +70,10 @@ class MultiOutcomeResolutionRequest(BaseModel):
     """
 
     market_id: int = Field(..., description="Prediction market ID")
-    question: str = Field(..., description="Question to resolve")
-    resolution_criteria: str = Field(..., description="Criteria for resolution")
-    outcomes: list[str] = Field(..., min_length=2, description="List of possible outcome labels")
-    num_outcomes: int = Field(..., ge=2, description="Number of outcomes")
+    question: str = Field(..., max_length=2000, description="Question to resolve")
+    resolution_criteria: str = Field(..., max_length=5000, description="Criteria for resolution")
+    outcomes: list[str] = Field(..., min_length=2, max_length=50, description="List of possible outcome labels")
+    num_outcomes: int = Field(..., ge=2, le=50, description="Number of outcomes")
     deadline: str | None = Field(None, description="Resolution deadline")
     callback_url: str | None = Field(None, description="Webhook callback URL")
 
@@ -268,21 +268,50 @@ class GetConfigResponse(BaseModel):
 
 
 class ResultStore:
-    """Simple in-memory result store."""
+    """In-memory result store with TTL-based eviction."""
+
+    MAX_ENTRIES = 1000
+    TTL_SECONDS = 3600
 
     def __init__(self):
         self._results: dict[str, ResultResponse] = {}
         self._status: dict[str, str] = {}
+        self._timestamps: dict[str, float] = {}
+
+    def _evict_stale(self):
+        import time
+        now = time.time()
+        stale_keys = [
+            k for k, ts in self._timestamps.items()
+            if now - ts > self.TTL_SECONDS
+        ]
+        for k in stale_keys:
+            self._results.pop(k, None)
+            self._status.pop(k, None)
+            self._timestamps.pop(k, None)
+        if len(self._timestamps) > self.MAX_ENTRIES:
+            oldest = sorted(self._timestamps, key=self._timestamps.get)[:len(self._timestamps) - self.MAX_ENTRIES]
+            for k in oldest:
+                self._results.pop(k, None)
+                self._status.pop(k, None)
+                self._timestamps.pop(k, None)
 
     def set_processing(self, request_id: str):
+        import time
+        self._evict_stale()
         self._status[request_id] = "processing"
+        self._timestamps[request_id] = time.time()
 
     def set_completed(self, request_id: str, result: ResultResponse):
+        import time
         self._results[request_id] = result
         self._status[request_id] = "completed"
+        self._timestamps[request_id] = time.time()
 
     def set_failed(self, request_id: str, error: str):
+        import time
         self._status[request_id] = f"failed: {error}"
+        self._timestamps[request_id] = time.time()
 
     def get(self, request_id: str) -> tuple[str, ResultResponse | None]:
         status = self._status.get(request_id, "not_found")
@@ -349,10 +378,16 @@ def create_app() -> FastAPI:
     api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
     oracle_api_key = os.getenv("ORACLE_API_KEY")
 
+    if not oracle_api_key:
+        logger.warning(
+            "⚠️  ORACLE_API_KEY not set — authentication is DISABLED. "
+            "Set ORACLE_API_KEY env var before deploying to production."
+        )
+
     async def verify_api_key(api_key: str | None = Security(api_key_header)):
         """Verify API key for protected endpoints."""
         if not oracle_api_key:
-            return  # No key configured = auth disabled (dev mode)
+            return
         if api_key != oracle_api_key:
             raise HTTPException(status_code=403, detail="Invalid or missing API key")
 
@@ -362,7 +397,7 @@ def create_app() -> FastAPI:
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,
-        allow_origin_regex=r"https://(.*\.)?(1024ex\.com|1024chain\.com|vercel\.app)",
+        allow_origin_regex=r"https://(.*\.)?(1024ex\.com|1024chain\.com|1024.*\.vercel\.app)",
         allow_credentials=True,
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["Content-Type", "X-API-Key", "Authorization"],
