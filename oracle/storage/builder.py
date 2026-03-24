@@ -7,7 +7,7 @@ consensus calculations, and research process recordings.
 Task ID: 2.8.1 - 2.8.8 from IMPLEMENTATION-TRACKER.md
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 import structlog
 
@@ -95,7 +95,7 @@ class OracleResearchDataBuilder:
 
         Task 2.8.3: Implement start_research().
         """
-        self.research_started_at = datetime.utcnow().isoformat()
+        self.research_started_at = datetime.now(timezone.utc).isoformat()
         logger.info(
             "Research started",
             market_id=self.market_id,
@@ -209,7 +209,7 @@ class OracleResearchDataBuilder:
 
         Task 2.8.7: Implement complete_research().
         """
-        self.research_completed_at = datetime.utcnow().isoformat()
+        self.research_completed_at = datetime.now(timezone.utc).isoformat()
         logger.info(
             "Research completed",
             market_id=self.market_id,
@@ -228,10 +228,10 @@ class OracleResearchDataBuilder:
             Complete OracleResearchData ready for IPFS storage
         """
         if not self.research_started_at:
-            self.research_started_at = datetime.utcnow().isoformat()
+            self.research_started_at = datetime.now(timezone.utc).isoformat()
 
         if not self.research_completed_at:
-            self.research_completed_at = datetime.utcnow().isoformat()
+            self.research_completed_at = datetime.now(timezone.utc).isoformat()
 
         # Build agent result entries
         agent_entries: list[ResearchDataEntry] = []

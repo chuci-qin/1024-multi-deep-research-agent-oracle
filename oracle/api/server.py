@@ -6,10 +6,12 @@ Provides HTTP endpoints for requesting oracle resolutions.
 API Version: v1 (Enhanced with full verification support)
 """
 
+import ipaddress
 import os
 import uuid
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
+from urllib.parse import urlparse
 
 # Load environment variables early
 from dotenv import load_dotenv
@@ -324,17 +326,53 @@ class ResultStore:
 # ============================================================================
 
 
+class _BoundedRequestStore:
+    """Dict-like store with TTL eviction and max size for request metadata."""
+
+    MAX_ENTRIES = 1000
+    TTL_SECONDS = 86400  # 24 hours
+
+    def __init__(self):
+        self._data: dict[str, ResolutionRequest] = {}
+        self._timestamps: dict[str, float] = {}
+
+    def _evict(self):
+        import time
+        now = time.time()
+        stale = [k for k, ts in self._timestamps.items() if now - ts > self.TTL_SECONDS]
+        for k in stale:
+            self._data.pop(k, None)
+            self._timestamps.pop(k, None)
+        if len(self._data) > self.MAX_ENTRIES:
+            oldest = sorted(self._timestamps, key=self._timestamps.get)[: len(self._data) - self.MAX_ENTRIES]
+            for k in oldest:
+                self._data.pop(k, None)
+                self._timestamps.pop(k, None)
+
+    def __setitem__(self, key: str, value: ResolutionRequest):
+        import time
+        self._evict()
+        self._data[key] = value
+        self._timestamps[key] = time.time()
+
+    def __getitem__(self, key: str):
+        return self._data[key]
+
+    def get(self, key: str, default=None):
+        return self._data.get(key, default)
+
+
 class OracleAPI:
     """Oracle API application."""
 
     def __init__(self):
         self.oracle: MultiAgentOracle | None = None
         self.result_store = ResultStore()
-        self.requests: dict[str, ResolutionRequest] = {}
+        self.requests = _BoundedRequestStore()
 
     async def initialize(self):
         """Initialize the oracle."""
-        num_agents = int(os.getenv("MIN_AGENTS", "5"))
+        num_agents = int(os.getenv("MIN_AGENTS", "3"))
 
         self.oracle = MultiAgentOracle(
             config=OracleConfig(
@@ -420,7 +458,7 @@ def create_app() -> FastAPI:
         return HealthResponse(
             status="healthy" if oracle else "initializing",
             version="1.0.0",
-            timestamp=datetime.utcnow().isoformat(),
+            timestamp=datetime.now(UTC).isoformat(),
             agents_configured=oracle.config.num_agents if oracle else None,
             ipfs_enabled=oracle.config.enable_ipfs if oracle else None,
         )
@@ -429,7 +467,11 @@ def create_app() -> FastAPI:
     # Oracle Config Endpoints (Phase A - 2026-01-09)
     # ========================================================================
 
-    @app.post("/api/v1/config/upload", response_model=UploadConfigResponse)
+    @app.post(
+        "/api/v1/config/upload",
+        response_model=UploadConfigResponse,
+        dependencies=[Depends(verify_api_key)],
+    )
     async def upload_oracle_config(request: UploadConfigRequest):
         """
         Upload oracle configuration to IPFS.
@@ -469,7 +511,7 @@ def create_app() -> FastAPI:
                 question=request.question,
                 resolution_criteria=request.resolution_criteria,
                 deadline=request.resolution_deadline,
-                created_at=datetime.utcnow().isoformat(),
+                created_at=datetime.now(UTC).isoformat(),
                 agent_count=agent_count,
                 agent_strategies=strategies,
                 consensus_threshold=consensus_threshold,
@@ -895,9 +937,38 @@ async def _execute_resolution(
         )
 
 
+def _validate_callback_url(url: str) -> None:
+    """Validate callback URL is not targeting private/internal networks (SSRF prevention)."""
+    import socket
+
+    parsed = urlparse(url)
+    hostname = parsed.hostname
+
+    if not hostname:
+        raise ValueError("Invalid callback URL: no hostname")
+
+    if hostname in ("localhost", "localhost.localdomain"):
+        raise ValueError(f"Callback URL targets localhost: {hostname}")
+
+    try:
+        addr = ipaddress.ip_address(hostname)
+    except ValueError:
+        resolved = socket.getaddrinfo(hostname, None)
+        addr = ipaddress.ip_address(resolved[0][4][0])
+
+    if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+        raise ValueError(f"Callback URL resolves to non-public address: {addr}")
+
+
 async def _send_webhook(url: str, result: ResultResponse):
     """Send webhook notification."""
     import httpx
+
+    try:
+        _validate_callback_url(url)
+    except ValueError as e:
+        logger.error(f"SSRF blocked: {e}")
+        return
 
     try:
         async with httpx.AsyncClient() as client:

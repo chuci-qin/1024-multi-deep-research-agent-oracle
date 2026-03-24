@@ -7,7 +7,7 @@ This provides transparency and verifiability for the oracle's decision-making.
 Task ID: 2.2.1 - 2.2.7 from IMPLEMENTATION-TRACKER.md
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 
 import structlog
@@ -53,7 +53,7 @@ class ThinkingStep(BaseModel):
 
     # Core fields (Task 2.2.2)
     timestamp: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="ISO timestamp when this step occurred",
     )
     step_type: ThinkingStepType = Field(..., description="Type of thinking step")
@@ -103,7 +103,7 @@ class ThinkingRecorder(BaseModel):
     agent_id: str = Field(..., description="ID of the agent being recorded")
     steps: list[ThinkingStep] = Field(default_factory=list, description="List of thinking steps")
     started_at: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(), description="When recording started"
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="When recording started"
     )
     completed_at: str | None = Field(None, description="When recording completed")
 
@@ -195,7 +195,7 @@ class ThinkingRecorder(BaseModel):
         confidence: float,
     ) -> ThinkingStep:
         """Record final conclusion."""
-        self.completed_at = datetime.utcnow().isoformat()
+        self.completed_at = datetime.now(timezone.utc).isoformat()
         return self.add_step(
             step_type=ThinkingStepType.FINAL_DETERMINATION,
             content=f"Conclusion: {outcome}\nReasoning: {reasoning}",
@@ -311,5 +311,5 @@ class ThinkingRecorder(BaseModel):
     def clear(self) -> None:
         """Clear all recorded steps."""
         self.steps = []
-        self.started_at = datetime.utcnow().isoformat()
+        self.started_at = datetime.now(timezone.utc).isoformat()
         self.completed_at = None

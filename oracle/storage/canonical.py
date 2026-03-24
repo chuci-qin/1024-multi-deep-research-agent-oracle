@@ -14,7 +14,7 @@ Task ID: 2.7.1 - 2.7.8 from IMPLEMENTATION-TRACKER.md
 
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 from enum import Enum
 from typing import Any
@@ -165,7 +165,7 @@ class OracleConfigData(HashableData):
 
     # Deadline and timing
     deadline: str | None = Field(None)
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     # Agent configuration
     agent_count: int

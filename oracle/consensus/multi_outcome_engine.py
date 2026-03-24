@@ -36,7 +36,7 @@ class MultiOutcomeConsensusConfig(BaseModel):
     threshold: float = Field(default=0.80, ge=0.5, le=1.0, description="Default 4/5 = 0.80 for multi-outcome")
     min_confidence: float = Field(default=0.5, ge=0.0, le=1.0)
     use_weighted_voting: bool = Field(default=True)
-    min_sources_per_agent: int = Field(default=50)
+    min_sources_per_agent: int = Field(default=5)
 
 
 class MultiOutcomeConsensusEngine:
@@ -101,17 +101,29 @@ class MultiOutcomeConsensusEngine:
             bins[label].append(result)
             weights[label] += self._calculate_vote_weight(result)
 
-        total_weight = sum(weights.values())
-        total_votes = len(valid_results)
+        # Exclude UNDETERMINED from consensus calculation (prevents vote dilution)
+        decisive_weight = sum(w for label, w in weights.items() if label != "UNDETERMINED")
+        decisive_votes = sum(len(agents) for label, agents in bins.items() if label != "UNDETERMINED")
 
-        # Vote distribution for response
+        # Vote distribution for response (include UNDETERMINED for visibility)
         vote_distribution = {label: len(agents) for label, agents in bins.items() if agents}
 
-        # Find winner
-        winning_label = max(weights.keys(), key=lambda k: weights[k])
+        # Find winner among decisive votes only
+        decisive_labels = [k for k in weights.keys() if k != "UNDETERMINED"]
+        if not decisive_labels:
+            return MultiOutcomeConsensusResult(
+                reached=False,
+                winning_outcome=undetermined,
+                reason="All agents returned UNDETERMINED",
+                vote_distribution=vote_distribution,
+                agent_count=len(valid_results),
+                requires_human_review=True,
+            )
+
+        winning_label = max(decisive_labels, key=lambda k: weights[k])
         winning_count = len(bins[winning_label])
-        winning_ratio = winning_count / total_votes if total_votes > 0 else 0
-        weighted_ratio = weights[winning_label] / total_weight if total_weight > 0 else 0
+        winning_ratio = winning_count / decisive_votes if decisive_votes > 0 else 0
+        weighted_ratio = weights[winning_label] / decisive_weight if decisive_weight > 0 else 0
 
         logger.info(
             "Multi-outcome vote results",
@@ -172,7 +184,7 @@ class MultiOutcomeConsensusEngine:
             return 0.0
         avg_credibility = sum(s.credibility_score for s in sources) / len(sources)
         categories = {s.category for s in sources}
-        diversity_bonus = min(len(categories) / 25, 0.2)
+        diversity_bonus = min(len(categories) / 5, 0.2)
         return min(avg_credibility + diversity_bonus, 1.0)
 
     def _merge_sources(self, results: list[MultiOutcomeAgentResult]) -> list[ResearchSource]:

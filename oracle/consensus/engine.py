@@ -44,7 +44,7 @@ class ConsensusConfig(BaseModel):
     use_weighted_voting: bool = Field(default=True)
 
     # Minimum sources per agent
-    min_sources_per_agent: int = Field(default=50)
+    min_sources_per_agent: int = Field(default=5)
 
 
 class ConsensusEngine:
@@ -117,15 +117,23 @@ class ConsensusEngine:
                 weight = self._calculate_vote_weight(result)
                 weights[outcome] += weight
 
-        # Calculate ratios
-        total_weight = sum(weights.values())
+        # Calculate ratios — exclude UNDETERMINED from winner selection
+        decisive_outcomes = {k: v for k, v in weights.items() if k != Outcome.UNDETERMINED}
+        decisive_weight = sum(decisive_outcomes.values())
+        decisive_votes = len(votes[Outcome.YES]) + len(votes[Outcome.NO])
         total_votes = len(valid_results)
 
-        # Find winner
-        winning_outcome = max(weights.keys(), key=lambda k: weights[k])
+        if decisive_votes > 0:
+            winning_outcome = max(decisive_outcomes.keys(), key=lambda k: decisive_outcomes[k])
+        else:
+            winning_outcome = Outcome.UNDETERMINED
         winning_count = len(votes[winning_outcome])
         winning_ratio = winning_count / total_votes if total_votes > 0 else 0
-        weighted_ratio = weights[winning_outcome] / total_weight if total_weight > 0 else 0
+        weighted_ratio = (
+            decisive_outcomes.get(winning_outcome, 0.0) / decisive_weight
+            if decisive_weight > 0
+            else 0
+        )
 
         logger.info(
             "Vote results",
@@ -138,6 +146,18 @@ class ConsensusEngine:
 
         # Check threshold
         effective_ratio = weighted_ratio if self.config.use_weighted_voting else winning_ratio
+
+        if winning_outcome == Outcome.UNDETERMINED:
+            return ConsensusResult(
+                reached=False,
+                outcome=Outcome.UNDETERMINED,
+                confidence=0.0,
+                agreement_ratio=winning_ratio,
+                weighted_ratio=0.0,
+                agent_count=len(valid_results),
+                requires_human_review=True,
+                reason="All decisive votes are UNDETERMINED",
+            )
 
         if effective_ratio >= self.config.threshold:
             # Consensus reached
@@ -199,7 +219,7 @@ class ConsensusEngine:
 
         # Category diversity bonus (0-0.2 based on 5 categories)
         categories = {s.category for s in sources}
-        diversity_bonus = min(len(categories) / 25, 0.2)
+        diversity_bonus = min(len(categories) / 5, 0.2)
 
         return min(avg_credibility + diversity_bonus, 1.0)
 

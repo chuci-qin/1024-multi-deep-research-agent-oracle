@@ -9,7 +9,7 @@ import contextlib
 import json
 import os
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 
 import httpx
 import structlog
@@ -200,7 +200,7 @@ class IPFSStorage:
             market_id=market_id,
             question=question,
             resolution_criteria=resolution_criteria,
-            research_timestamp=datetime.utcnow().isoformat(),
+            research_timestamp=datetime.now(timezone.utc).isoformat(),
             agents=agent_results,
             consensus=consensus,
             merged_sources=merged_sources,
@@ -392,9 +392,12 @@ class IPFSStorage:
         """Mock upload for development/testing."""
         import hashlib
 
-        # Generate a mock CID based on content hash
-        content_hash = hashlib.sha256(content.encode()).hexdigest()
-        mock_cid = f"Qm{content_hash[:44]}"  # Simulates CIDv0 format
+        import base58
+
+        content_hash = hashlib.sha256(content.encode()).digest()
+        # Real CIDv0 is Base58-encoded multihash (0x12 = sha256, 0x20 = 32 bytes)
+        multihash = b"\x12\x20" + content_hash
+        mock_cid = base58.b58encode(multihash).decode()
 
         # Optionally save to local file for debugging
         debug_dir = os.path.join(os.getcwd(), ".ipfs_mock")

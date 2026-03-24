@@ -9,7 +9,7 @@ Task ID: 2.5.1 - 2.5.13 from IMPLEMENTATION-TRACKER.md
 
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 import structlog
 from pydantic import BaseModel, Field
@@ -134,7 +134,7 @@ class ProvableConsensusData(BaseModel):
     tier_distribution: dict[str, int] = Field(default_factory=dict)
 
     # Timestamps
-    calculated_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    calculated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     # Hash for verification
     data_hash: str | None = Field(None)

@@ -7,7 +7,7 @@ and source categorization.
 Task ID: 2.3.1 - 2.3.7 from IMPLEMENTATION-TRACKER.md
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 from urllib.parse import urlparse
 
@@ -53,7 +53,7 @@ class WebsiteVisit(BaseModel):
     url: str = Field(..., description="Full URL of the visited page")
     title: str = Field(default="", description="Page title")
     visited_at: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(), description="ISO timestamp of visit"
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="ISO timestamp of visit"
     )
     content_snippet: str = Field(
         default="", description="Excerpt of relevant content from the page"

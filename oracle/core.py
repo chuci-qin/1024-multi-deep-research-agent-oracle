@@ -8,7 +8,7 @@ calculates consensus, and stores results.
 import asyncio
 import os
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 import structlog
 from pydantic import BaseModel, Field
@@ -23,7 +23,6 @@ from oracle.models import (
     AgentResult,
     MultiOutcomeAgentResult,
     MultiOutcomeOracleResult,
-    OracleRequest,
     OracleResult,
     Outcome,
 )
@@ -129,7 +128,10 @@ class MultiAgentOracle:
         ]
 
         if not api_keys:
-            logger.error("No GEMINI_API_KEY configured!")
+            raise RuntimeError(
+                "No Gemini API keys configured. "
+                "Set at least GEMINI_API_KEY in your environment."
+            )
 
         agents = []
         for i in range(num_agents):
@@ -170,7 +172,7 @@ class MultiAgentOracle:
         """
         request_id = f"req_{uuid.uuid4().hex[:12]}"
         market_id = market_id or 0
-        started_at = datetime.utcnow().isoformat()
+        started_at = datetime.now(timezone.utc).isoformat()
 
         logger.info(
             "Starting resolution",
@@ -179,42 +181,40 @@ class MultiAgentOracle:
             num_agents=len(self.agents),
         )
 
-        # Create request
-        OracleRequest(
-            request_id=request_id,
-            market_id=market_id,
-            question=question,
-            resolution_criteria=resolution_criteria,
-            deadline=deadline,
-            callback_url=callback_url,
-        )
-
-        # Run agents with internal retry loop
         max_retries = int(os.getenv("MAX_AGENT_RETRIES", "10"))
         retry_base_delay = float(os.getenv("AGENT_RETRY_BASE_DELAY", "2"))
         min_valid = self.consensus_engine.config.min_agents
 
-        agent_results = []
-        for attempt in range(max_retries):
-            agent_results = await self._run_agents(question, resolution_criteria, deadline)
-            valid_count = sum(1 for r in agent_results if r.is_valid)
+        agent_results = await self._run_agents(question, resolution_criteria, deadline)
 
+        for attempt in range(1, max_retries):
+            valid_count = sum(1 for r in agent_results if r.is_valid)
             if valid_count >= min_valid:
-                if attempt > 0:
+                if attempt > 1:
                     logger.info(
-                        f"✅ Retry succeeded on attempt {attempt + 1}/{max_retries}: {valid_count} valid agents"
+                        f"✅ Retry succeeded on attempt {attempt}/{max_retries}: {valid_count} valid agents"
                     )
                 break
 
-            if attempt < max_retries - 1:
-                delay = min(retry_base_delay * (2**attempt), 30)
-                failed_errors = [r.error for r in agent_results if r.error]
-                logger.warning(
-                    f"⚠️ Attempt {attempt + 1}/{max_retries}: only {valid_count}/{len(agent_results)} valid agents. "
-                    f"Retrying in {delay:.0f}s... Errors: {failed_errors[:3]}"
-                )
-                await asyncio.sleep(delay)
-            else:
+            failed_indices = [i for i, r in enumerate(agent_results) if not r.is_valid]
+            failed_agents = [self.agents[i] for i in failed_indices]
+            failed_errors = [agent_results[i].error for i in failed_indices]
+
+            delay = min(retry_base_delay * (2 ** (attempt - 1)), 30)
+            logger.warning(
+                f"⚠️ Attempt {attempt}/{max_retries}: only {valid_count}/{len(agent_results)} valid agents. "
+                f"Retrying {len(failed_agents)} failed agents in {delay:.0f}s... Errors: {failed_errors[:3]}"
+            )
+            await asyncio.sleep(delay)
+
+            retry_results = await self._run_agents_subset(
+                failed_agents, question, resolution_criteria, deadline
+            )
+            for idx, retry_result in zip(failed_indices, retry_results):
+                agent_results[idx] = retry_result
+        else:
+            valid_count = sum(1 for r in agent_results if r.is_valid)
+            if valid_count < min_valid:
                 logger.error(
                     f"❌ All {max_retries} attempts exhausted. valid_agents={valid_count}/{len(agent_results)}. "
                     f"Proceeding with best available results."
@@ -256,7 +256,7 @@ class MultiAgentOracle:
             merged_sources=merged_sources,
             ipfs_cid=ipfs_cid,
             research_started_at=started_at,
-            research_completed_at=datetime.utcnow().isoformat(),
+            research_completed_at=datetime.now(timezone.utc).isoformat(),
         )
 
         logger.info(
@@ -288,7 +288,7 @@ class MultiAgentOracle:
         """
         request_id = f"req_{uuid.uuid4().hex[:12]}"
         market_id = market_id or 0
-        started_at = datetime.utcnow().isoformat()
+        started_at = datetime.now(timezone.utc).isoformat()
 
         logger.info(
             "Starting multi-outcome resolution",
@@ -312,22 +312,40 @@ class MultiAgentOracle:
         )
         min_valid = mo_engine.config.min_agents
 
-        agent_results: list[MultiOutcomeAgentResult] = []
-        for attempt in range(max_retries):
-            agent_results = await self._run_agents_multi_outcome(question, resolution_criteria, outcomes, deadline)
-            valid_count = sum(1 for r in agent_results if r.is_valid)
+        agent_results = await self._run_agents_multi_outcome(question, resolution_criteria, outcomes, deadline)
 
+        for attempt in range(1, max_retries):
+            valid_count = sum(1 for r in agent_results if r.is_valid)
             if valid_count >= min_valid:
-                if attempt > 0:
-                    logger.info(f"Retry succeeded on attempt {attempt + 1}/{max_retries}: {valid_count} valid agents")
+                if attempt > 1:
+                    logger.info(
+                        f"✅ Multi-outcome retry succeeded on attempt {attempt}/{max_retries}: {valid_count} valid agents"
+                    )
                 break
 
-            if attempt < max_retries - 1:
-                delay = min(retry_base_delay * (2 ** attempt), 30)
-                logger.warning(f"Attempt {attempt + 1}/{max_retries}: only {valid_count}/{len(agent_results)} valid agents. Retrying in {delay:.0f}s...")
-                await asyncio.sleep(delay)
-            else:
-                logger.error(f"All {max_retries} attempts exhausted. valid_agents={valid_count}/{len(agent_results)}.")
+            failed_indices = [i for i, r in enumerate(agent_results) if not r.is_valid]
+            failed_agents = [self.agents[i] for i in failed_indices]
+            failed_errors = [agent_results[i].error for i in failed_indices]
+
+            delay = min(retry_base_delay * (2 ** (attempt - 1)), 30)
+            logger.warning(
+                f"⚠️ Multi-outcome attempt {attempt}/{max_retries}: only {valid_count}/{len(agent_results)} valid. "
+                f"Retrying {len(failed_agents)} failed agents in {delay:.0f}s... Errors: {failed_errors[:3]}"
+            )
+            await asyncio.sleep(delay)
+
+            retry_results = await self._run_agents_multi_outcome_subset(
+                failed_agents, question, resolution_criteria, outcomes, deadline
+            )
+            for idx, retry_result in zip(failed_indices, retry_results):
+                agent_results[idx] = retry_result
+        else:
+            valid_count = sum(1 for r in agent_results if r.is_valid)
+            if valid_count < min_valid:
+                logger.error(
+                    f"❌ All {max_retries} multi-outcome attempts exhausted. valid_agents={valid_count}/{len(agent_results)}. "
+                    f"Proceeding with best available results."
+                )
 
         # Calculate consensus
         consensus = mo_engine.calculate(agent_results, outcomes)
@@ -387,7 +405,7 @@ class MultiAgentOracle:
             merged_sources=merged_sources,
             ipfs_cid=ipfs_cid,
             research_started_at=started_at,
-            research_completed_at=datetime.utcnow().isoformat(),
+            research_completed_at=datetime.now(timezone.utc).isoformat(),
         )
 
         logger.info(
@@ -474,6 +492,68 @@ class MultiAgentOracle:
 
         return list(results)
 
+    async def _run_agents_multi_outcome_subset(
+        self,
+        agents: list[BaseAgent],
+        question: str,
+        resolution_criteria: str,
+        outcomes: list[str],
+        deadline: str | None = None,
+    ) -> list[MultiOutcomeAgentResult]:
+        """Re-run a subset of agents for multi-outcome resolution (retry only failed)."""
+
+        async def run_agent(agent: BaseAgent) -> MultiOutcomeAgentResult:
+            try:
+                if isinstance(agent, GeminiDeepResearchAgent):
+                    return await asyncio.wait_for(
+                        agent.research_multi_outcome(question, resolution_criteria, outcomes, deadline),
+                        timeout=self.config.agent_timeout_seconds,
+                    )
+                else:
+                    binary_result = await asyncio.wait_for(
+                        agent.research(question, resolution_criteria, deadline),
+                        timeout=self.config.agent_timeout_seconds,
+                    )
+                    return MultiOutcomeAgentResult(
+                        agent_id=binary_result.agent_id,
+                        model=binary_result.model,
+                        strategy=binary_result.strategy,
+                        outcome_index=-1,
+                        outcome_label="UNDETERMINED",
+                        confidence=binary_result.confidence,
+                        reasoning=binary_result.reasoning,
+                        sources=binary_result.sources,
+                        error=binary_result.error,
+                    )
+            except TimeoutError:
+                logger.warning(f"Agent {agent.agent_id} timed out (multi-outcome retry)")
+                return MultiOutcomeAgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome_index=-1,
+                    outcome_label="UNDETERMINED",
+                    confidence=0.0,
+                    reasoning="Research timed out",
+                    sources=[],
+                    error="Timeout",
+                )
+            except Exception as e:
+                logger.error(f"Agent {agent.agent_id} failed (multi-outcome retry): {e}")
+                return MultiOutcomeAgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome_index=-1,
+                    outcome_label="UNDETERMINED",
+                    confidence=0.0,
+                    reasoning="Research failed",
+                    sources=[],
+                    error=str(e),
+                )
+
+        tasks = [run_agent(agent) for agent in agents]
+        results = await asyncio.gather(*tasks)
+        return list(results)
+
     async def _run_agents(
         self,
         question: str,
@@ -526,6 +606,48 @@ class MultiAgentOracle:
             failed=len(failed),
         )
 
+        return list(results)
+
+    async def _run_agents_subset(
+        self,
+        agents: list[BaseAgent],
+        question: str,
+        resolution_criteria: str,
+        deadline: str | None = None,
+    ) -> list[AgentResult]:
+        """Re-run a subset of agents (for retrying only failed agents)."""
+
+        async def run_agent(agent: BaseAgent) -> AgentResult:
+            try:
+                return await asyncio.wait_for(
+                    agent.research(question, resolution_criteria, deadline),
+                    timeout=self.config.agent_timeout_seconds,
+                )
+            except TimeoutError:
+                logger.warning(f"Agent {agent.agent_id} timed out (retry)")
+                return AgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome=Outcome.INVALID,
+                    confidence=0.0,
+                    reasoning="Research timed out",
+                    sources=[],
+                    error="Timeout",
+                )
+            except Exception as e:
+                logger.error(f"Agent {agent.agent_id} failed (retry): {e}")
+                return AgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome=Outcome.INVALID,
+                    confidence=0.0,
+                    reasoning="Research failed",
+                    sources=[],
+                    error=str(e),
+                )
+
+        tasks = [run_agent(agent) for agent in agents]
+        results = await asyncio.gather(*tasks)
         return list(results)
 
     async def get_result(self, request_id: str) -> OracleResult | None:

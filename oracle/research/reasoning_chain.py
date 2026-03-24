@@ -7,7 +7,7 @@ This provides a transparent audit trail of how conclusions were reached.
 Task ID: 2.4.1 - 2.4.7 from IMPLEMENTATION-TRACKER.md
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 
 import structlog
@@ -53,7 +53,7 @@ class ReasoningStep(BaseModel):
     # Sequence information
     step_number: int = Field(default=0, description="Order in the reasoning chain")
     timestamp: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(),
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(),
         description="When this step was recorded",
     )
 
@@ -121,7 +121,7 @@ class ReasoningChain(BaseModel):
         None, ge=0.0, le=1.0, description="Final confidence level"
     )
     started_at: str = Field(
-        default_factory=lambda: datetime.utcnow().isoformat(), description="When reasoning started"
+        default_factory=lambda: datetime.now(timezone.utc).isoformat(), description="When reasoning started"
     )
     completed_at: str | None = Field(None, description="When reasoning completed")
 
@@ -214,7 +214,7 @@ class ReasoningChain(BaseModel):
         # If this is the final conclusion, record it
         self.final_outcome = outcome
         self.final_confidence = confidence
-        self.completed_at = datetime.utcnow().isoformat()
+        self.completed_at = datetime.now(timezone.utc).isoformat()
 
         logger.info(
             "Reasoning concluded",
@@ -366,5 +366,5 @@ class ReasoningChain(BaseModel):
         self.steps = []
         self.final_outcome = None
         self.final_confidence = None
-        self.started_at = datetime.utcnow().isoformat()
+        self.started_at = datetime.now(timezone.utc).isoformat()
         self.completed_at = None

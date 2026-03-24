@@ -4,7 +4,7 @@ Data models for the Multi-Agent Oracle.
 These models define the core data structures used throughout the oracle system.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -75,7 +75,7 @@ class AgentResult(BaseModel):
     sources: list[ResearchSource] = Field(default_factory=list)
     source_count: int = Field(default=0)
     research_duration_seconds: float = Field(default=0.0)
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     error: str | None = Field(None)
 
     @property
@@ -120,7 +120,7 @@ class MultiOutcomeAgentResult(BaseModel):
     sources: list[ResearchSource] = Field(default_factory=list)
     source_count: int = Field(default=0)
     research_duration_seconds: float = Field(default=0.0)
-    timestamp: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     error: str | None = Field(None)
 
     @property
@@ -167,7 +167,7 @@ class MultiOutcomeOracleResult(BaseModel):
     merged_sources: list[ResearchSource] = Field(default_factory=list)
 
     ipfs_cid: str | None = Field(None)
-    research_started_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    research_started_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     research_completed_at: str | None = Field(None)
 
 
@@ -180,7 +180,7 @@ class OracleRequest(BaseModel):
     resolution_criteria: str = Field(..., description="Criteria for resolution")
     deadline: str | None = Field(None, description="Resolution deadline")
     callback_url: str | None = Field(None, description="Webhook callback URL")
-    created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 
 class ConsensusResult(BaseModel):
@@ -220,7 +220,7 @@ class OracleResult(BaseModel):
     ipfs_cid: str | None = Field(None, description="IPFS CID for full research data")
 
     # Timestamps
-    research_started_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat())
+    research_started_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     research_completed_at: str | None = Field(None)
 
     # Blockchain submission

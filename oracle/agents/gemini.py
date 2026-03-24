@@ -52,9 +52,10 @@ class GeminiDeepResearchAgent(BaseAgent):
 
         use_vertex = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
 
+        self._gcp_creds_path: str | None = None
+
         if use_vertex:
             try:
-                # Support injecting GCP credentials JSON via env var (for Docker/EasyPanel)
                 creds_json = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON")
                 if creds_json and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
                     import tempfile
@@ -63,6 +64,7 @@ class GeminiDeepResearchAgent(BaseAgent):
                     with os.fdopen(fd, "w") as f:
                         f.write(creds_json)
                     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = creds_path
+                    self._gcp_creds_path = creds_path
 
                 project = os.getenv("VERTEX_AI_PROJECT", "gen-lang-client-0475545182")
                 location = os.getenv("VERTEX_AI_LOCATION", "us-central1")
@@ -77,6 +79,7 @@ class GeminiDeepResearchAgent(BaseAgent):
                     strategy=strategy.value,
                 )
             except Exception as e:
+                self._cleanup_gcp_creds()
                 logger.warning(f"Failed to initialize Vertex AI agent: {e}")
         else:
             api_key = api_key or os.getenv("GEMINI_API_KEY")
@@ -534,7 +537,8 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
         try:
             text = response.text if response.text else ""
 
-            # Try to extract JSON from response
+            import re
+
             json_match = None
             if "```json" in text:
                 start = text.find("```json") + 7
@@ -542,9 +546,15 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
                 if end > start:
                     json_match = text[start:end].strip()
             elif "{" in text and "}" in text:
-                start = text.find("{")
-                end = text.rfind("}") + 1
-                json_match = text[start:end]
+                m = re.search(r"\{.*?\}", text, re.DOTALL)
+                if m:
+                    json_match = m.group(0)
+                    try:
+                        json.loads(json_match)
+                    except json.JSONDecodeError:
+                        start = text.find("{")
+                        end = text.rfind("}") + 1
+                        json_match = text[start:end]
 
             if json_match:
                 try:
@@ -760,6 +770,8 @@ IMPORTANT:
         try:
             text = response.text if response.text else ""
 
+            import re as _re_json
+
             json_match = None
             if "```json" in text:
                 start = text.find("```json") + 7
@@ -767,9 +779,15 @@ IMPORTANT:
                 if end > start:
                     json_match = text[start:end].strip()
             elif "{" in text and "}" in text:
-                start = text.find("{")
-                end = text.rfind("}") + 1
-                json_match = text[start:end]
+                m = _re_json.search(r"\{.*?\}", text, _re_json.DOTALL)
+                if m:
+                    json_match = m.group(0)
+                    try:
+                        json.loads(json_match)
+                    except json.JSONDecodeError:
+                        start = text.find("{")
+                        end = text.rfind("}") + 1
+                        json_match = text[start:end]
 
             if json_match:
                 try:
@@ -799,11 +817,17 @@ IMPORTANT:
                 except (json.JSONDecodeError, ValueError):
                     pass
 
-            # Fallback: try to find an outcome label in the text
-            text_upper = text.upper()
+            # Fallback: require exact word-boundary match (not substring)
+            import re as _re
+
+            matches = []
             for i, label in enumerate(outcomes):
-                if label.upper() in text_upper:
-                    return i, label, 0.6, text[:500]
+                pattern = r'\b' + _re.escape(label) + r'\b'
+                if _re.search(pattern, text, _re.IGNORECASE):
+                    matches.append((i, label))
+
+            if len(matches) == 1:
+                return matches[0][0], matches[0][1], 0.6, text[:500]
 
             return -1, "UNDETERMINED", 0.3, text[:500]
 
@@ -811,6 +835,15 @@ IMPORTANT:
             logger.warning(f"Error parsing multi-outcome response: {e}")
             return -1, "UNDETERMINED", 0.0, str(e)
 
+    def _cleanup_gcp_creds(self):
+        """Remove temporary GCP credentials file if we created one."""
+        if self._gcp_creds_path:
+            try:
+                os.unlink(self._gcp_creds_path)
+            except OSError:
+                pass
+            self._gcp_creds_path = None
+
     async def close(self):
         """Cleanup resources."""
-        pass
+        self._cleanup_gcp_creds()
