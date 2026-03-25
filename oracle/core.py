@@ -116,7 +116,8 @@ class MultiAgentOracle:
         model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         num_agents = int(os.getenv("MIN_AGENTS", str(self.config.num_agents)))
 
-        # Collect all available API keys for distribution
+        use_vertex = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
+
         api_keys = [
             k
             for k in [
@@ -127,10 +128,11 @@ class MultiAgentOracle:
             if k
         ]
 
-        if not api_keys:
+        if not api_keys and not use_vertex:
             raise RuntimeError(
                 "No Gemini API keys configured. "
-                "Set at least GEMINI_API_KEY in your environment."
+                "Set at least GEMINI_API_KEY in your environment, "
+                "or set USE_VERTEX_AI=true with GOOGLE_APPLICATION_CREDENTIALS_JSON."
             )
 
         agents = []
