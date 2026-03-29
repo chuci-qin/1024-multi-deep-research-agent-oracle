@@ -4,11 +4,15 @@ Base Agent - Abstract base class for all research agents.
 
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from oracle.models import AgentResult, ResearchSource
+
+ProgressCallback = Callable[[dict[str, Any]], Awaitable[None]] | None
 
 
 class SearchStrategy(StrEnum):
@@ -74,6 +78,7 @@ class BaseAgent(ABC):
         question: str,
         resolution_criteria: str,
         deadline: str | None = None,
+        progress_callback: ProgressCallback = None,
     ) -> AgentResult:
         """
         Conduct deep research on a question.
@@ -82,6 +87,9 @@ class BaseAgent(ABC):
             question: The question to research
             resolution_criteria: Criteria for determining the answer
             deadline: Optional deadline for the question
+            progress_callback: Optional async callback for SSE progress events.
+                Receives dict with at minimum {"event_type": "..."}.
+                Must be non-blocking (fire-and-forget).
 
         Returns:
             AgentResult with outcome, confidence, sources, and reasoning

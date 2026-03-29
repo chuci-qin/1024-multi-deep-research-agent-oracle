@@ -8,12 +8,15 @@ calculates consensus, and stores results.
 import asyncio
 import os
 import uuid
+from collections.abc import AsyncIterator
 from datetime import datetime, timezone
+from typing import Any
 
 import structlog
 from pydantic import BaseModel, Field
 
 from oracle.agents import BaseAgent, GeminiDeepResearchAgent, SearchStrategy
+from oracle.agents.base import ProgressCallback
 from oracle.consensus import ConsensusConfig, ConsensusEngine
 from oracle.consensus.multi_outcome_engine import (
     MultiOutcomeConsensusConfig,
@@ -542,6 +545,116 @@ class MultiAgentOracle:
         results = await asyncio.gather(*tasks)
         return list(results)
 
+    async def _run_agents_subset_with_progress(
+        self,
+        agents: list[BaseAgent],
+        question: str,
+        resolution_criteria: str,
+        deadline: str | None,
+        callback_factory,
+        original_indices: list[int],
+    ) -> list[AgentResult]:
+        """Re-run failed agents with progress callbacks."""
+
+        async def run_agent(agent: BaseAgent, original_index: int) -> AgentResult:
+            cb = await callback_factory(original_index)
+            try:
+                return await asyncio.wait_for(
+                    agent.research(question, resolution_criteria, deadline, progress_callback=cb),
+                    timeout=self.config.agent_timeout_seconds,
+                )
+            except TimeoutError:
+                logger.warning(f"Agent {agent.agent_id} timed out (retry)")
+                return AgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome=Outcome.INVALID,
+                    confidence=0.0,
+                    reasoning="Research timed out",
+                    sources=[],
+                    error="Timeout",
+                )
+            except Exception as e:
+                logger.error(f"Agent {agent.agent_id} failed (retry): {e}")
+                return AgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome=Outcome.INVALID,
+                    confidence=0.0,
+                    reasoning="Research failed",
+                    sources=[],
+                    error=str(e),
+                )
+
+        tasks = [run_agent(agent, idx) for agent, idx in zip(agents, original_indices)]
+        results = await asyncio.gather(*tasks)
+        return list(results)
+
+    async def _run_agents_multi_outcome_subset_with_progress(
+        self,
+        agents: list[BaseAgent],
+        question: str,
+        resolution_criteria: str,
+        outcomes: list[str],
+        deadline: str | None,
+        callback_factory,
+        original_indices: list[int],
+    ) -> list[MultiOutcomeAgentResult]:
+        """Re-run failed multi-outcome agents with progress callbacks."""
+
+        async def run_agent(agent: BaseAgent, original_index: int) -> MultiOutcomeAgentResult:
+            cb = await callback_factory(original_index)
+            try:
+                if isinstance(agent, GeminiDeepResearchAgent):
+                    return await asyncio.wait_for(
+                        agent.research_multi_outcome(question, resolution_criteria, outcomes, deadline, progress_callback=cb),
+                        timeout=self.config.agent_timeout_seconds,
+                    )
+                else:
+                    binary_result = await asyncio.wait_for(
+                        agent.research(question, resolution_criteria, deadline, progress_callback=cb),
+                        timeout=self.config.agent_timeout_seconds,
+                    )
+                    return MultiOutcomeAgentResult(
+                        agent_id=binary_result.agent_id,
+                        model=binary_result.model,
+                        strategy=binary_result.strategy,
+                        outcome_index=-1,
+                        outcome_label="UNDETERMINED",
+                        confidence=binary_result.confidence,
+                        reasoning=binary_result.reasoning,
+                        sources=binary_result.sources,
+                        error=binary_result.error,
+                    )
+            except TimeoutError:
+                logger.warning(f"Agent {agent.agent_id} timed out (multi-outcome retry)")
+                return MultiOutcomeAgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome_index=-1,
+                    outcome_label="UNDETERMINED",
+                    confidence=0.0,
+                    reasoning="Research timed out",
+                    sources=[],
+                    error="Timeout",
+                )
+            except Exception as e:
+                logger.error(f"Agent {agent.agent_id} failed (multi-outcome retry): {e}")
+                return MultiOutcomeAgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome_index=-1,
+                    outcome_label="UNDETERMINED",
+                    confidence=0.0,
+                    reasoning="Research failed",
+                    sources=[],
+                    error=str(e),
+                )
+
+        tasks = [run_agent(agent, idx) for agent, idx in zip(agents, original_indices)]
+        results = await asyncio.gather(*tasks)
+        return list(results)
+
     async def _run_agents(
         self,
         question: str,
@@ -635,6 +748,491 @@ class MultiAgentOracle:
                 )
 
         tasks = [run_agent(agent) for agent in agents]
+        results = await asyncio.gather(*tasks)
+        return list(results)
+
+    async def resolve_with_progress(
+        self,
+        question: str,
+        resolution_criteria: str,
+        market_id: int | None = None,
+        deadline: str | None = None,
+        request_id: str | None = None,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """
+        Resolve a binary prediction market question with SSE progress events.
+
+        Yields dict events suitable for SSE serialization. Final event has
+        event_type="resolution:completed" or "resolution:error".
+        """
+        request_id = request_id or f"req_{uuid.uuid4().hex[:12]}"
+        market_id = market_id or 0
+        started_at = datetime.now(timezone.utc).isoformat()
+
+        yield {
+            "event_type": "resolution:started",
+            "requestId": request_id,
+            "marketId": market_id,
+            "agentCount": len(self.agents),
+            "marketType": "binary",
+        }
+
+        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=512)
+        completed_agents: set[int] = set()
+
+        async def _agent_callback(agent_index: int):
+            """Create a per-agent callback that wraps events with agent index."""
+
+            async def _cb(event: dict[str, Any]):
+                enriched = {**event, "agentIndex": agent_index}
+                try:
+                    queue.put_nowait(enriched)
+                except asyncio.QueueFull:
+                    logger.warning("SSE event queue full, dropping event: %s", event.get("event_type"))
+                if event.get("event_type") == "agent_completed":
+                    completed_agents.add(agent_index)
+                    try:
+                        queue.put_nowait({
+                            "event_type": "resolution:progress",
+                            "agentsCompleted": len(completed_agents),
+                            "agentsTotal": len(self.agents),
+                        })
+                    except asyncio.QueueFull:
+                        pass
+
+            return _cb
+
+        max_retries = int(os.getenv("MAX_AGENT_RETRIES", "10"))
+        retry_base_delay = float(os.getenv("AGENT_RETRY_BASE_DELAY", "2"))
+        min_valid = self.consensus_engine.config.min_agents
+
+        try:
+            agents_task = asyncio.create_task(
+                self._run_agents_with_progress(
+                    question, resolution_criteria, deadline, _agent_callback
+                )
+            )
+
+            try:
+                while not agents_task.done():
+                    try:
+                        event = await asyncio.wait_for(queue.get(), timeout=1.0)
+                        yield event
+                    except asyncio.TimeoutError:
+                        continue
+
+                agent_results = agents_task.result()
+            except GeneratorExit:
+                agents_task.cancel()
+                try:
+                    await agents_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                return
+
+            while not queue.empty():
+                yield queue.get_nowait()
+
+            for attempt in range(1, max_retries):
+                valid_count = sum(1 for r in agent_results if r.is_valid)
+                if valid_count >= min_valid:
+                    break
+
+                failed_indices = [i for i, r in enumerate(agent_results) if not r.is_valid]
+                failed_agents = [self.agents[i] for i in failed_indices]
+                delay = min(retry_base_delay * (2 ** (attempt - 1)), 30)
+
+                yield {
+                    "event_type": "resolution:retrying",
+                    "attempt": attempt,
+                    "maxRetries": max_retries,
+                    "failedAgentCount": len(failed_agents),
+                    "agentsRetrying": [a.agent_id for a in failed_agents],
+                }
+
+                await asyncio.sleep(delay)
+                retry_results = await self._run_agents_subset_with_progress(
+                    failed_agents, question, resolution_criteria, deadline, _agent_callback, failed_indices
+                )
+                for idx, retry_result in zip(failed_indices, retry_results):
+                    agent_results[idx] = retry_result
+
+                while not queue.empty():
+                    yield queue.get_nowait()
+
+            consensus = self.consensus_engine.calculate(agent_results)
+
+            if consensus.reached:
+                agreeing_results = [r for r in agent_results if r.outcome == consensus.outcome]
+                merged_sources = self.consensus_engine._merge_sources(agreeing_results)
+            else:
+                merged_sources = []
+
+            ipfs_cid = None
+            if self.ipfs_storage and (consensus.reached or len(agent_results) > 0):
+                try:
+                    ipfs_cid = await self.ipfs_storage.store_research(
+                        market_id=market_id,
+                        question=question,
+                        resolution_criteria=resolution_criteria,
+                        agent_results=agent_results,
+                        consensus=consensus,
+                        merged_sources=merged_sources,
+                    )
+                except Exception as e:
+                    logger.error(f"IPFS storage failed: {e}")
+
+            result = OracleResult(
+                request_id=request_id,
+                market_id=market_id,
+                question=question,
+                resolution_criteria=resolution_criteria,
+                consensus=consensus,
+                agent_results=agent_results,
+                merged_sources=merged_sources,
+                ipfs_cid=ipfs_cid,
+                research_started_at=started_at,
+                research_completed_at=datetime.now(timezone.utc).isoformat(),
+            )
+
+            valid_count = sum(1 for r in agent_results if r.is_valid)
+            completed_at = datetime.now(timezone.utc).isoformat()
+
+            yield {
+                "event_type": "resolution:completed",
+                "requestId": request_id,
+                "outcome": consensus.outcome.value,
+                "confidence": consensus.confidence,
+                "consensusReached": consensus.reached,
+                "agreementRatio": consensus.agreement_ratio,
+                "weightedRatio": consensus.weighted_ratio,
+                "sourceCount": len(merged_sources),
+                "ipfsCid": ipfs_cid,
+                "agentCount": len(agent_results),
+                "validAgentCount": valid_count,
+                "requiresManualReview": not consensus.reached,
+                "researchStartedAt": started_at,
+                "researchCompletedAt": completed_at,
+                "_result": result,
+            }
+
+        except Exception as e:
+            logger.error(f"Resolution with progress failed: {e}")
+            yield {
+                "event_type": "resolution:error",
+                "requestId": request_id,
+                "error": str(e),
+            }
+
+    async def resolve_multi_outcome_with_progress(
+        self,
+        question: str,
+        resolution_criteria: str,
+        outcomes: list[str],
+        market_id: int | None = None,
+        deadline: str | None = None,
+        consensus_threshold: float | None = None,
+        request_id: str | None = None,
+    ) -> AsyncIterator[dict[str, Any]]:
+        """
+        Resolve a multi-outcome prediction market question with SSE progress events.
+        """
+        request_id = request_id or f"req_{uuid.uuid4().hex[:12]}"
+        market_id = market_id or 0
+        started_at = datetime.now(timezone.utc).isoformat()
+
+        yield {
+            "event_type": "resolution:started",
+            "requestId": request_id,
+            "marketId": market_id,
+            "agentCount": len(self.agents),
+            "marketType": "multi_outcome",
+            "outcomeCount": len(outcomes),
+        }
+
+        queue: asyncio.Queue[dict[str, Any]] = asyncio.Queue(maxsize=512)
+        completed_agents: set[int] = set()
+
+        async def _agent_callback(agent_index: int):
+
+            async def _cb(event: dict[str, Any]):
+                enriched = {**event, "agentIndex": agent_index}
+                try:
+                    queue.put_nowait(enriched)
+                except asyncio.QueueFull:
+                    logger.warning("SSE event queue full, dropping event: %s", event.get("event_type"))
+                if event.get("event_type") == "agent_completed":
+                    completed_agents.add(agent_index)
+                    try:
+                        queue.put_nowait({
+                            "event_type": "resolution:progress",
+                            "agentsCompleted": len(completed_agents),
+                            "agentsTotal": len(self.agents),
+                        })
+                    except asyncio.QueueFull:
+                        pass
+
+            return _cb
+
+        max_retries = int(os.getenv("MAX_AGENT_RETRIES", "10"))
+        retry_base_delay = float(os.getenv("AGENT_RETRY_BASE_DELAY", "2"))
+
+        threshold = consensus_threshold or float(os.getenv("MULTI_OUTCOME_CONSENSUS_THRESHOLD", "0.80"))
+        mo_engine = MultiOutcomeConsensusEngine(
+            MultiOutcomeConsensusConfig(
+                threshold=threshold,
+                min_agents=self.consensus_engine.config.min_agents,
+            )
+        )
+        min_valid = mo_engine.config.min_agents
+
+        try:
+            agents_task = asyncio.create_task(
+                self._run_agents_multi_outcome_with_progress(
+                    question, resolution_criteria, outcomes, deadline, _agent_callback
+                )
+            )
+
+            try:
+                while not agents_task.done():
+                    try:
+                        event = await asyncio.wait_for(queue.get(), timeout=1.0)
+                        yield event
+                    except asyncio.TimeoutError:
+                        continue
+
+                agent_results = agents_task.result()
+            except GeneratorExit:
+                agents_task.cancel()
+                try:
+                    await agents_task
+                except (asyncio.CancelledError, Exception):
+                    pass
+                return
+
+            while not queue.empty():
+                yield queue.get_nowait()
+
+            for attempt in range(1, max_retries):
+                valid_count = sum(1 for r in agent_results if r.is_valid)
+                if valid_count >= min_valid:
+                    break
+
+                failed_indices = [i for i, r in enumerate(agent_results) if not r.is_valid]
+                failed_agents = [self.agents[i] for i in failed_indices]
+                delay = min(retry_base_delay * (2 ** (attempt - 1)), 30)
+
+                yield {
+                    "event_type": "resolution:retrying",
+                    "attempt": attempt,
+                    "maxRetries": max_retries,
+                    "failedAgentCount": len(failed_agents),
+                    "agentsRetrying": [a.agent_id for a in failed_agents],
+                }
+
+                await asyncio.sleep(delay)
+                retry_results = await self._run_agents_multi_outcome_subset_with_progress(
+                    failed_agents, question, resolution_criteria, outcomes, deadline, _agent_callback, failed_indices
+                )
+                for idx, retry_result in zip(failed_indices, retry_results):
+                    agent_results[idx] = retry_result
+
+                while not queue.empty():
+                    yield queue.get_nowait()
+
+            consensus = mo_engine.calculate(agent_results, outcomes)
+
+            if consensus.reached:
+                winning_label = consensus.winning_outcome.outcome_label
+                agreeing = [r for r in agent_results if r.outcome_label == winning_label]
+                merged_sources = mo_engine._merge_sources(agreeing)
+            else:
+                merged_sources = []
+
+            ipfs_cid = None
+            if self.ipfs_storage and len(agent_results) > 0:
+                try:
+                    binary_results = []
+                    for r in agent_results:
+                        binary_results.append(AgentResult(
+                            agent_id=r.agent_id,
+                            model=r.model,
+                            strategy=r.strategy,
+                            outcome=Outcome.YES if r.outcome_index >= 0 else Outcome.UNDETERMINED,
+                            confidence=r.confidence,
+                            reasoning=f"[Multi-outcome: {r.outcome_label} (index={r.outcome_index})] {r.reasoning}",
+                            sources=r.sources,
+                        ))
+                    from oracle.models import ConsensusResult as BinaryConsensusResult
+                    binary_consensus = BinaryConsensusResult(
+                        reached=consensus.reached,
+                        outcome=Outcome.YES if consensus.winning_outcome.is_determined else Outcome.UNDETERMINED,
+                        confidence=consensus.confidence,
+                        agreement_ratio=consensus.agreement_ratio,
+                        weighted_ratio=consensus.weighted_ratio,
+                        agent_count=consensus.agent_count,
+                    )
+                    ipfs_cid = await self.ipfs_storage.store_research(
+                        market_id=market_id,
+                        question=question,
+                        resolution_criteria=resolution_criteria,
+                        agent_results=binary_results,
+                        consensus=binary_consensus,
+                        merged_sources=merged_sources,
+                    )
+                except Exception as e:
+                    logger.error(f"IPFS storage failed: {e}")
+
+            result = MultiOutcomeOracleResult(
+                request_id=request_id,
+                market_id=market_id,
+                question=question,
+                resolution_criteria=resolution_criteria,
+                outcomes=outcomes,
+                consensus=consensus,
+                agent_results=agent_results,
+                merged_sources=merged_sources,
+                ipfs_cid=ipfs_cid,
+                research_started_at=started_at,
+                research_completed_at=datetime.now(timezone.utc).isoformat(),
+            )
+
+            winning = consensus.winning_outcome
+            valid_count = sum(1 for r in agent_results if r.is_valid)
+            completed_at = datetime.now(timezone.utc).isoformat()
+
+            yield {
+                "event_type": "resolution:completed",
+                "requestId": request_id,
+                "outcomeIndex": winning.outcome_index if winning.is_determined else -1,
+                "outcomeLabel": winning.outcome_label,
+                "confidence": consensus.confidence,
+                "consensusReached": consensus.reached,
+                "agreementRatio": consensus.agreement_ratio,
+                "weightedRatio": consensus.weighted_ratio,
+                "sourceCount": len(merged_sources),
+                "ipfsCid": ipfs_cid,
+                "agentCount": len(agent_results),
+                "validAgentCount": valid_count,
+                "requiresManualReview": not consensus.reached or consensus.requires_human_review,
+                "researchStartedAt": started_at,
+                "researchCompletedAt": completed_at,
+                "_result": result,
+            }
+
+        except Exception as e:
+            logger.error(f"Multi-outcome resolution with progress failed: {e}")
+            yield {
+                "event_type": "resolution:error",
+                "requestId": request_id,
+                "error": str(e),
+            }
+
+    async def _run_agents_with_progress(
+        self,
+        question: str,
+        resolution_criteria: str,
+        deadline: str | None,
+        callback_factory,
+    ) -> list[AgentResult]:
+        """Run all agents in parallel with progress callbacks."""
+
+        async def run_agent(agent: BaseAgent, index: int) -> AgentResult:
+            cb = await callback_factory(index)
+            try:
+                return await asyncio.wait_for(
+                    agent.research(question, resolution_criteria, deadline, progress_callback=cb),
+                    timeout=self.config.agent_timeout_seconds,
+                )
+            except TimeoutError:
+                logger.warning(f"Agent {agent.agent_id} timed out")
+                return AgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome=Outcome.INVALID,
+                    confidence=0.0,
+                    reasoning="Research timed out",
+                    sources=[],
+                    error="Timeout",
+                )
+            except Exception as e:
+                logger.error(f"Agent {agent.agent_id} failed: {e}")
+                return AgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome=Outcome.INVALID,
+                    confidence=0.0,
+                    reasoning="Research failed",
+                    sources=[],
+                    error=str(e),
+                )
+
+        tasks = [run_agent(agent, i) for i, agent in enumerate(self.agents)]
+        results = await asyncio.gather(*tasks)
+        return list(results)
+
+    async def _run_agents_multi_outcome_with_progress(
+        self,
+        question: str,
+        resolution_criteria: str,
+        outcomes: list[str],
+        deadline: str | None,
+        callback_factory,
+    ) -> list[MultiOutcomeAgentResult]:
+        """Run all agents in parallel for multi-outcome with progress callbacks."""
+
+        async def run_agent(agent: BaseAgent, index: int) -> MultiOutcomeAgentResult:
+            cb = await callback_factory(index)
+            try:
+                if isinstance(agent, GeminiDeepResearchAgent):
+                    return await asyncio.wait_for(
+                        agent.research_multi_outcome(
+                            question, resolution_criteria, outcomes, deadline, progress_callback=cb
+                        ),
+                        timeout=self.config.agent_timeout_seconds,
+                    )
+                else:
+                    binary_result = await asyncio.wait_for(
+                        agent.research(question, resolution_criteria, deadline, progress_callback=cb),
+                        timeout=self.config.agent_timeout_seconds,
+                    )
+                    return MultiOutcomeAgentResult(
+                        agent_id=binary_result.agent_id,
+                        model=binary_result.model,
+                        strategy=binary_result.strategy,
+                        outcome_index=-1,
+                        outcome_label="UNDETERMINED",
+                        confidence=binary_result.confidence,
+                        reasoning=binary_result.reasoning,
+                        sources=binary_result.sources,
+                        error=binary_result.error,
+                    )
+            except TimeoutError:
+                logger.warning(f"Agent {agent.agent_id} timed out")
+                return MultiOutcomeAgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome_index=-1,
+                    outcome_label="UNDETERMINED",
+                    confidence=0.0,
+                    reasoning="Research timed out",
+                    sources=[],
+                    error="Timeout",
+                )
+            except Exception as e:
+                logger.error(f"Agent {agent.agent_id} failed: {e}")
+                return MultiOutcomeAgentResult(
+                    agent_id=agent.agent_id,
+                    model=agent.model_name,
+                    outcome_index=-1,
+                    outcome_label="UNDETERMINED",
+                    confidence=0.0,
+                    reasoning="Research failed",
+                    sources=[],
+                    error=str(e),
+                )
+
+        tasks = [run_agent(agent, i) for i, agent in enumerate(self.agents)]
         results = await asyncio.gather(*tasks)
         return list(results)
 

@@ -15,7 +15,7 @@ import structlog
 from google import genai  # New SDK
 from google.genai import types as genai_types
 
-from oracle.agents.base import AgentConfig, BaseAgent, SearchStrategy
+from oracle.agents.base import AgentConfig, BaseAgent, ProgressCallback, SearchStrategy
 from oracle.models import (
     AgentResult,
     MultiOutcomeAgentResult,
@@ -91,7 +91,18 @@ class GeminiDeepResearchAgent(BaseAgent):
     def model_name(self) -> str:
         return self._model_name
 
-    async def _execute_tool_call(self, function_call) -> dict:
+    async def _emit(self, callback: ProgressCallback, event: dict) -> None:
+        """Fire-and-forget: send a progress event via callback. Never raises."""
+        if callback is None:
+            return
+        try:
+            await callback(event)
+        except Exception:
+            pass
+
+    async def _execute_tool_call(
+        self, function_call, progress_callback: ProgressCallback = None
+    ) -> dict:
         """Execute a Gemini function call by routing to the registered tool."""
         tool_name = function_call.name
         tool_args = dict(function_call.args) if function_call.args else {}
@@ -101,16 +112,38 @@ class GeminiDeepResearchAgent(BaseAgent):
             logger.warning("Unknown tool called by Gemini", tool_name=tool_name)
             return {"error": f"Unknown tool: {tool_name}"}
 
+        await self._emit(progress_callback, {
+            "event_type": "tool_call_start",
+            "agentId": self.agent_id,
+            "toolName": tool_name,
+            "toolArgs": tool_args,
+        })
+
         logger.info("Executing tool", tool_name=tool_name, args=tool_args)
         try:
             result = await tool.execute(**tool_args)
             logger.info("Tool result", tool_name=tool_name, result_keys=list(result.keys()))
+            await self._emit(progress_callback, {
+                "event_type": "tool_call_result",
+                "agentId": self.agent_id,
+                "toolName": tool_name,
+                "resultKeys": list(result.keys()),
+                "snippet": json.dumps(result, default=str)[:300],
+            })
             return result
         except Exception as e:
             logger.error("Tool execution failed", tool_name=tool_name, error=str(e))
+            await self._emit(progress_callback, {
+                "event_type": "tool_call_error",
+                "agentId": self.agent_id,
+                "toolName": tool_name,
+                "error": str(e),
+            })
             return {"error": str(e)}
 
-    async def _phase1_tool_calls(self, prompt: str) -> tuple[list[dict], list[ResearchSource]]:
+    async def _phase1_tool_calls(
+        self, prompt: str, progress_callback: ProgressCallback = None
+    ) -> tuple[list[dict], list[ResearchSource]]:
         """Phase 1: Let Gemini decide whether to call data tools (Binance, etc.).
 
         Uses function_declarations ONLY (no google_search — they can't coexist).
@@ -119,6 +152,12 @@ class GeminiDeepResearchAgent(BaseAgent):
         all_tools = get_all_tools()
         if not all_tools:
             return [], []
+
+        await self._emit(progress_callback, {
+            "event_type": "phase1_started",
+            "agentId": self.agent_id,
+            "availableTools": [t.name for t in all_tools],
+        })
 
         func_decls = [t.to_function_declaration() for t in all_tools]
         tool_prompt = (
@@ -175,7 +214,7 @@ class GeminiDeepResearchAgent(BaseAgent):
 
             function_responses = []
             for fc in function_calls:
-                result = await self._execute_tool_call(fc)
+                result = await self._execute_tool_call(fc, progress_callback)
                 tool_data.append(
                     {"tool": fc.name, "args": dict(fc.args) if fc.args else {}, "result": result}
                 )
@@ -214,6 +253,12 @@ class GeminiDeepResearchAgent(BaseAgent):
         else:
             logger.debug("Phase 1: no tools needed", agent_id=self.agent_id)
 
+        await self._emit(progress_callback, {
+            "event_type": "phase1_completed",
+            "agentId": self.agent_id,
+            "toolsCalled": len(tool_data),
+        })
+
         return tool_data, tool_sources
 
     async def research(
@@ -221,6 +266,7 @@ class GeminiDeepResearchAgent(BaseAgent):
         question: str,
         resolution_criteria: str,
         deadline: str | None = None,
+        progress_callback: ProgressCallback = None,
     ) -> AgentResult:
         """
         Two-phase research:
@@ -230,6 +276,12 @@ class GeminiDeepResearchAgent(BaseAgent):
         start_time = time.time()
 
         if not self._initialized or not self.client:
+            await self._emit(progress_callback, {
+                "event_type": "agent_error",
+                "agentId": self.agent_id,
+                "model": self.model_name,
+                "error": "Agent not initialized - missing API key",
+            })
             return AgentResult(
                 agent_id=self.agent_id,
                 model=self.model_name,
@@ -244,11 +296,19 @@ class GeminiDeepResearchAgent(BaseAgent):
 
         logger.info("Starting research", agent_id=self.agent_id, question=question[:100])
 
+        await self._emit(progress_callback, {
+            "event_type": "agent_started",
+            "agentId": self.agent_id,
+            "model": self.model_name,
+            "strategy": self.strategy.value,
+            "marketType": "binary",
+        })
+
         try:
             prompt = self._build_research_prompt(question, resolution_criteria, deadline)
 
             # --- Phase 1: Tool Calls (function_declarations only) ---
-            tool_data, tool_sources = await self._phase1_tool_calls(prompt)
+            tool_data, tool_sources = await self._phase1_tool_calls(prompt, progress_callback)
 
             # Inject tool data into prompt for Phase 2
             if tool_data:
@@ -261,6 +321,12 @@ class GeminiDeepResearchAgent(BaseAgent):
                 prompt = prompt + data_block
 
             # --- Phase 2: Google Search (grounding only) ---
+            await self._emit(progress_callback, {
+                "event_type": "phase2_search_started",
+                "agentId": self.agent_id,
+                "message": "Starting Google Search grounding research",
+            })
+
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self._model_name,
@@ -274,6 +340,17 @@ class GeminiDeepResearchAgent(BaseAgent):
 
             # Merge sources: grounding sources + tool API sources
             sources = self._extract_sources(response) + tool_sources
+
+            await self._emit(progress_callback, {
+                "event_type": "phase2_search_completed",
+                "agentId": self.agent_id,
+                "sourceCount": len(sources),
+            })
+
+            await self._emit(progress_callback, {
+                "event_type": "parsing_started",
+                "agentId": self.agent_id,
+            })
 
             outcome, confidence, reasoning = self._parse_response(response)
 
@@ -300,6 +377,15 @@ class GeminiDeepResearchAgent(BaseAgent):
                 duration=f"{duration:.2f}s",
             )
 
+            await self._emit(progress_callback, {
+                "event_type": "agent_completed",
+                "agentId": self.agent_id,
+                "outcome": outcome.value,
+                "confidence": confidence,
+                "sourceCount": len(sources),
+                "durationSeconds": round(duration, 2),
+            })
+
             return result
 
         except Exception as e:
@@ -308,6 +394,12 @@ class GeminiDeepResearchAgent(BaseAgent):
                 agent_id=self.agent_id,
                 error=str(e),
             )
+
+            await self._emit(progress_callback, {
+                "event_type": "agent_error",
+                "agentId": self.agent_id,
+                "error": str(e),
+            })
 
             return AgentResult(
                 agent_id=self.agent_id,
@@ -589,6 +681,7 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
         resolution_criteria: str,
         outcomes: list[str],
         deadline: str | None = None,
+        progress_callback: ProgressCallback = None,
     ) -> MultiOutcomeAgentResult:
         """
         Two-phase research for multi-outcome markets.
@@ -598,6 +691,12 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
         start_time = time.time()
 
         if not self._initialized or not self.client:
+            await self._emit(progress_callback, {
+                "event_type": "agent_error",
+                "agentId": self.agent_id,
+                "model": self.model_name,
+                "error": "Agent not initialized - missing API key",
+            })
             return MultiOutcomeAgentResult(
                 agent_id=self.agent_id,
                 model=self.model_name,
@@ -612,11 +711,20 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
 
         logger.info("Starting multi-outcome research", agent_id=self.agent_id, question=question[:100], num_outcomes=len(outcomes))
 
+        await self._emit(progress_callback, {
+            "event_type": "agent_started",
+            "agentId": self.agent_id,
+            "model": self.model_name,
+            "strategy": self.strategy.value,
+            "marketType": "multi_outcome",
+            "outcomeCount": len(outcomes),
+        })
+
         try:
             prompt = self._build_multi_outcome_prompt(question, resolution_criteria, outcomes, deadline)
 
             # Phase 1: Tool Calls
-            tool_data, tool_sources = await self._phase1_tool_calls(prompt)
+            tool_data, tool_sources = await self._phase1_tool_calls(prompt, progress_callback)
 
             if tool_data:
                 data_block = "\n\n=== VERIFIED API DATA (from Phase 1 tool calls) ===\n"
@@ -628,6 +736,12 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
                 prompt = prompt + data_block
 
             # Phase 2: Google Search
+            await self._emit(progress_callback, {
+                "event_type": "phase2_search_started",
+                "agentId": self.agent_id,
+                "message": "Starting Google Search grounding research (multi-outcome)",
+            })
+
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=self._model_name,
@@ -640,6 +754,18 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
             )
 
             sources = self._extract_sources(response) + tool_sources
+
+            await self._emit(progress_callback, {
+                "event_type": "phase2_search_completed",
+                "agentId": self.agent_id,
+                "sourceCount": len(sources),
+            })
+
+            await self._emit(progress_callback, {
+                "event_type": "parsing_started",
+                "agentId": self.agent_id,
+            })
+
             outcome_index, outcome_label, confidence, reasoning = self._parse_multi_outcome_response(response, outcomes)
 
             duration = time.time() - start_time
@@ -665,10 +791,28 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
                 source_count=len(sources),
                 duration=f"{duration:.2f}s",
             )
+
+            await self._emit(progress_callback, {
+                "event_type": "agent_completed",
+                "agentId": self.agent_id,
+                "outcomeIndex": outcome_index,
+                "outcomeLabel": outcome_label,
+                "confidence": confidence,
+                "sourceCount": len(sources),
+                "durationSeconds": round(duration, 2),
+            })
+
             return result
 
         except Exception as e:
             logger.error("Multi-outcome research failed", agent_id=self.agent_id, error=str(e))
+
+            await self._emit(progress_callback, {
+                "event_type": "agent_error",
+                "agentId": self.agent_id,
+                "error": str(e),
+            })
+
             return MultiOutcomeAgentResult(
                 agent_id=self.agent_id,
                 model=self.model_name,

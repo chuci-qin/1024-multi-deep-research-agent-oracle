@@ -22,6 +22,7 @@ import structlog
 import uvicorn
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Security
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
@@ -777,7 +778,275 @@ def create_app() -> FastAPI:
             logger.error(f"Multi-outcome resolution failed: {e}")
             raise HTTPException(status_code=500, detail=str(e)) from e
 
+    # ========================================================================
+    # SSE Streaming Resolution Endpoints
+    # ========================================================================
+
+    @app.post(
+        "/api/v1/resolve/stream",
+        dependencies=[Depends(verify_api_key)],
+    )
+    async def resolve_stream(request: ResolutionRequest):
+        """
+        SSE streaming resolution for binary prediction markets.
+
+        Streams progress events as Server-Sent Events, then the final result.
+        Each event is a JSON-encoded SSE `data:` line with an `event:` type.
+        A heartbeat `:heartbeat` comment is sent every 15 seconds to keep
+        the connection alive.
+        """
+        if not api_instance.oracle:
+            raise HTTPException(status_code=503, detail="Oracle not initialized")
+
+        async def _generate():
+            import json as _json
+            import time as _time
+
+            request_id = f"req_{uuid.uuid4().hex[:12]}"
+            api_instance.result_store.set_processing(request_id)
+
+            last_heartbeat = _time.monotonic()
+            heartbeat_interval = 15.0
+
+            try:
+                async for event in api_instance.oracle.resolve_with_progress(
+                    question=request.question,
+                    resolution_criteria=request.resolution_criteria,
+                    market_id=request.market_id,
+                    deadline=request.deadline,
+                    request_id=request_id,
+                ):
+                    now = _time.monotonic()
+                    if now - last_heartbeat >= heartbeat_interval:
+                        yield ":heartbeat\n\n"
+                        last_heartbeat = now
+
+                    event_type = event.get("event_type", "progress")
+                    oracle_result = event.pop("_result", None)
+
+                    data = _json.dumps(event, default=str, ensure_ascii=False)
+                    yield f"event: {event_type}\ndata: {data}\n\n"
+
+                    if event_type == "resolution:completed" and oracle_result:
+                        try:
+                            final_response = await _build_result_response_from_oracle_result(
+                                request_id, request, oracle_result
+                            )
+                            api_instance.result_store.set_completed(request_id, final_response)
+                        except Exception as e:
+                            logger.error(f"Failed to build final response: {e}")
+                            api_instance.result_store.set_failed(request_id, str(e))
+
+                    if event_type == "resolution:error":
+                        api_instance.result_store.set_failed(
+                            request_id, event.get("error", "Unknown error")
+                        )
+
+            except Exception as e:
+                logger.error(f"SSE stream error: {e}")
+                error_data = _json.dumps({"event_type": "resolution:error", "error": str(e)})
+                yield f"event: resolution:error\ndata: {error_data}\n\n"
+                api_instance.result_store.set_failed(request_id, str(e))
+
+        return StreamingResponse(
+            _generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
+    @app.post(
+        "/api/v1/resolve-multi/stream",
+        dependencies=[Depends(verify_api_key)],
+    )
+    async def resolve_multi_stream(request: MultiOutcomeResolutionRequest):
+        """
+        SSE streaming resolution for multi-outcome prediction markets.
+
+        Same SSE format as /api/v1/resolve/stream but with multi-outcome events.
+        """
+        if not api_instance.oracle:
+            raise HTTPException(status_code=503, detail="Oracle not initialized")
+
+        if len(request.outcomes) != request.num_outcomes:
+            raise HTTPException(
+                status_code=400,
+                detail=f"outcomes length ({len(request.outcomes)}) must match num_outcomes ({request.num_outcomes})",
+            )
+
+        async def _generate():
+            import json as _json
+            import time as _time
+
+            request_id = f"req_{uuid.uuid4().hex[:12]}"
+            api_instance.result_store.set_processing(request_id)
+
+            last_heartbeat = _time.monotonic()
+            heartbeat_interval = 15.0
+
+            threshold = request.consensus_threshold or float(
+                os.getenv("MULTI_OUTCOME_CONSENSUS_THRESHOLD", "0.80")
+            )
+
+            try:
+                async for event in api_instance.oracle.resolve_multi_outcome_with_progress(
+                    question=request.question,
+                    resolution_criteria=request.resolution_criteria,
+                    outcomes=request.outcomes,
+                    market_id=request.market_id,
+                    deadline=request.deadline,
+                    consensus_threshold=threshold,
+                    request_id=request_id,
+                ):
+                    now = _time.monotonic()
+                    if now - last_heartbeat >= heartbeat_interval:
+                        yield ":heartbeat\n\n"
+                        last_heartbeat = now
+
+                    event_type = event.get("event_type", "progress")
+                    oracle_result = event.pop("_result", None)
+
+                    data = _json.dumps(event, default=str, ensure_ascii=False)
+                    yield f"event: {event_type}\ndata: {data}\n\n"
+
+                    if event_type == "resolution:completed" and oracle_result:
+                        try:
+                            final_response = await _build_result_response_from_oracle_result(
+                                request_id, request, oracle_result
+                            )
+                            api_instance.result_store.set_completed(request_id, final_response)
+                        except Exception as e:
+                            logger.error(f"Failed to build multi-outcome final response: {e}")
+                            api_instance.result_store.set_failed(request_id, str(e))
+
+                    if event_type == "resolution:error":
+                        api_instance.result_store.set_failed(
+                            request_id, event.get("error", "Unknown error")
+                        )
+
+            except Exception as e:
+                logger.error(f"Multi-outcome SSE stream error: {e}")
+                error_data = _json.dumps({"event_type": "resolution:error", "error": str(e)})
+                yield f"event: resolution:error\ndata: {error_data}\n\n"
+                api_instance.result_store.set_failed(request_id, str(e))
+
+        return StreamingResponse(
+            _generate(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
+
     return app
+
+
+async def _build_result_response_from_oracle_result(
+    request_id: str,
+    request: ResolutionRequest,
+    result,
+) -> ResultResponse:
+    """Build a ResultResponse from an OracleResult (used by SSE endpoint)."""
+    from oracle.agents import StrategyFactory
+    from oracle.consensus import StrictConsensusConfig, StrictConsensusEngine
+    from oracle.storage import OracleResearchDataBuilder
+
+    research_started_at = result.research_started_at
+    research_completed_at = result.research_completed_at
+
+    builder = OracleResearchDataBuilder(
+        market_id=request.market_id,
+        question=request.question,
+        resolution_criteria=request.resolution_criteria,
+        deadline=request.deadline,
+    )
+    builder.research_started_at = research_started_at
+    builder.research_completed_at = research_completed_at
+
+    for agent_result in result.agent_results:
+        builder.add_agent_result(agent_result)
+
+    builder.set_consensus(result.consensus)
+    builder.set_merged_sources(result.merged_sources)
+
+    agent_count = request.agent_count or 5
+    strategies = [p.value for p in StrategyFactory.get_recommended_profiles(agent_count)]
+
+    oracle_config = builder.build_config(
+        agent_count=agent_count,
+        agent_strategies=strategies,
+        consensus_threshold=request.consensus_threshold
+        or float(os.getenv("CONSENSUS_THRESHOLD", "0.66")),
+    )
+    _, config_hash = oracle_config.get_hash_data()
+
+    research_data = builder.build()
+    _, research_hash = research_data.get_hash_data()
+
+    strict_engine = StrictConsensusEngine(
+        config=StrictConsensusConfig(
+            threshold=request.consensus_threshold
+            or float(os.getenv("CONSENSUS_THRESHOLD", "0.66")),
+        )
+    )
+    strict_consensus, provable_data = strict_engine.calculate_strict(result.agent_results)
+
+    from oracle.models import MultiOutcomeOracleResult
+    if isinstance(result, MultiOutcomeOracleResult):
+        outcome_str = result.consensus.winning_outcome.outcome_label
+        weighted_ratio = result.consensus.weighted_ratio
+    else:
+        outcome_str = result.consensus.outcome.value
+        weighted_ratio = result.consensus.weighted_ratio
+
+    return ResultResponse(
+        request_id=request_id,
+        market_id=request.market_id,
+        status="completed",
+        outcome=outcome_str,
+        confidence=result.consensus.confidence,
+        agreement_ratio=result.consensus.agreement_ratio,
+        weighted_ratio=weighted_ratio,
+        consensus_reached=result.consensus.reached,
+        agent_count=len(result.agent_results),
+        valid_agent_count=sum(1 for r in result.agent_results if r.is_valid),
+        total_sources=sum(len(r.sources) for r in result.agent_results),
+        unique_sources=len(result.merged_sources),
+        tier1_sources=provable_data.verification.tier1_sources,
+        tier2_sources=provable_data.verification.tier2_sources,
+        oracle_config_cid=request.oracle_config_cid,
+        oracle_config_hash=config_hash,
+        research_data_cid=result.ipfs_cid,
+        research_data_hash=research_hash,
+        verification_passed=provable_data.verification.passed,
+        verification_issues=provable_data.verification.issues,
+        requires_manual_review=(
+            strict_consensus.requires_human_review
+            or (provable_data.disagreement and provable_data.disagreement.requires_manual_review)
+        ),
+        review_reason=(
+            provable_data.disagreement.review_reason if provable_data.disagreement else None
+        ),
+        disagreement_analysis=(
+            provable_data.disagreement.model_dump()
+            if provable_data.disagreement and provable_data.disagreement.has_disagreement
+            else None
+        ),
+        research_started_at=research_started_at,
+        research_completed_at=research_completed_at,
+        ipfs_mock=(
+            result.ipfs_cid is None
+            or not result.ipfs_cid
+            or os.path.exists(
+                os.path.join(os.getcwd(), ".ipfs_mock", f"{result.ipfs_cid}.json")
+            )
+        ),
+    )
 
 
 async def _run_resolution(request_id: str, request: ResolutionRequest):
