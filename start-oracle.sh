@@ -13,15 +13,14 @@ echo "🔮 Starting 1024 Multi-Agent Oracle..."
 # Check if .env exists
 if [ ! -f .env ]; then
     echo "❌ .env file not found!"
-    echo "   Please copy .env.example to .env and add your GEMINI_API_KEY"
+    echo "   Please copy .env.example to .env and configure Vertex AI credentials."
     exit 1
 fi
 
-# Check if GEMINI_API_KEY is set
-if grep -q "GEMINI_API_KEY=$" .env || grep -q "GEMINI_API_KEY=your" .env; then
-    echo "⚠️  Warning: GEMINI_API_KEY is not set in .env"
-    echo "   The Oracle will not be able to research questions without an API key."
-    echo "   Get your key at: https://ai.google.dev/"
+# Check if Vertex AI credentials are configured
+if ! grep -q "GOOGLE_APPLICATION_CREDENTIALS_JSON=" .env || grep -q 'GOOGLE_APPLICATION_CREDENTIALS_JSON={"type":"service_account","project_id":"..."' .env; then
+    echo "⚠️  Warning: GOOGLE_APPLICATION_CREDENTIALS_JSON is not configured in .env"
+    echo "   The Oracle requires Vertex AI. Set GOOGLE_APPLICATION_CREDENTIALS_JSON with your GCP service account JSON."
     echo ""
 fi
 

@@ -5,7 +5,7 @@ Basic usage example for Multi-Agent Oracle.
 This example shows how to use the oracle to resolve a prediction market question.
 
 Requirements:
-    - Set GEMINI_API_KEY environment variable
+    - Set USE_VERTEX_AI=true and GOOGLE_APPLICATION_CREDENTIALS_JSON in environment
 
 Usage:
     python examples/basic_usage.py
@@ -27,10 +27,10 @@ from oracle.core import OracleConfig
 async def main():
     """Run a basic oracle resolution."""
 
-    # Check for API key
-    if not os.getenv("GEMINI_API_KEY"):
-        print("❌ Error: GEMINI_API_KEY environment variable not set")
-        print("   Set it with: export GEMINI_API_KEY=your_key_here")
+    # Check for Vertex AI credentials
+    if os.getenv("USE_VERTEX_AI", "false").lower() != "true" or not os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON"):
+        print("❌ Error: Vertex AI not configured")
+        print("   Set USE_VERTEX_AI=true and GOOGLE_APPLICATION_CREDENTIALS_JSON in your environment")
         return
 
     print("🔮 1024 Multi-Agent Deep Research Oracle")

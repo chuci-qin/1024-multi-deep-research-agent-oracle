@@ -238,7 +238,8 @@ def config():
     table.add_column("Source")
 
     config_items = [
-        ("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY", ""), "env"),
+        ("GOOGLE_APPLICATION_CREDENTIALS_JSON", "set" if os.getenv("GOOGLE_APPLICATION_CREDENTIALS_JSON") else "NOT SET", "env"),
+        ("USE_VERTEX_AI", os.getenv("USE_VERTEX_AI", "false"), "env"),
         ("WEB3_STORAGE_TOKEN", os.getenv("WEB3_STORAGE_TOKEN", ""), "env"),
         (
             "SOLANA_RPC_URL",

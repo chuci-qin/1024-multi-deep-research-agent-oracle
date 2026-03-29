@@ -1,5 +1,9 @@
 # 📖 Google Gemini Deep Research API Guide
 
+> **DEPRECATED (2026-03-29):** This project no longer supports AI Studio API keys (`GEMINI_API_KEY`).
+> We use **Vertex AI** exclusively via `GOOGLE_APPLICATION_CREDENTIALS_JSON`.
+> This document is kept for historical reference only. See `.env.example` for current configuration.
+
 > Complete guide to using Google Gemini API for deep research with source citations
 
 ## Overview

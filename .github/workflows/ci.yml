@@ -65,8 +65,8 @@ jobs:
       - name: Run tests
         run: uv run pytest tests/ -v --tb=short
         env:
-          # Use mock/test values for CI
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_TEST || 'test-key' }}
+          # Vertex AI disabled in CI — tests use mocks
+          USE_VERTEX_AI: "false"
           MIN_AGENTS: 2
           CONSENSUS_THRESHOLD: 0.67
           LOG_LEVEL: DEBUG

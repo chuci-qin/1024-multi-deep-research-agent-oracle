@@ -82,25 +82,10 @@ class GeminiDeepResearchAgent(BaseAgent):
                 self._cleanup_gcp_creds()
                 logger.warning(f"Failed to initialize Vertex AI agent: {e}")
         else:
-            api_key = api_key or os.getenv("GEMINI_API_KEY")
-            self._api_key = api_key
-            if api_key:
-                try:
-                    self.client = genai.Client(api_key=api_key)
-                    self._initialized = True
-                    logger.info(
-                        "Initialized Gemini agent (AI Studio)",
-                        agent_id=self.agent_id,
-                        model=model,
-                        strategy=strategy.value,
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to initialize Gemini agent: {e}")
-            else:
-                logger.warning(
-                    "GEMINI_API_KEY not set - agent will fail on research calls",
-                    agent_id=self.agent_id,
-                )
+            logger.error(
+                "Vertex AI is required. Set USE_VERTEX_AI=true and provide GOOGLE_APPLICATION_CREDENTIALS_JSON.",
+                agent_id=self.agent_id,
+            )
 
     @property
     def model_name(self) -> str:
@@ -254,7 +239,7 @@ class GeminiDeepResearchAgent(BaseAgent):
                 reasoning="Agent not initialized - missing API key",
                 sources=[],
                 research_duration_seconds=0,
-                error="GEMINI_API_KEY not configured",
+                error="Vertex AI not configured (GOOGLE_APPLICATION_CREDENTIALS_JSON required)",
             )
 
         logger.info("Starting research", agent_id=self.agent_id, question=question[:100])
@@ -622,7 +607,7 @@ Only use UNDETERMINED when the data is very close to the threshold AND the time 
                 confidence=0.0,
                 reasoning="Agent not initialized - missing API key",
                 sources=[],
-                error="GEMINI_API_KEY not configured",
+                error="Vertex AI not configured (GOOGLE_APPLICATION_CREDENTIALS_JSON required)",
             )
 
         logger.info("Starting multi-outcome research", agent_id=self.agent_id, question=question[:100], num_outcomes=len(outcomes))

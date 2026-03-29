@@ -118,35 +118,21 @@ class MultiAgentOracle:
 
         use_vertex = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
 
-        api_keys = [
-            k
-            for k in [
-                os.getenv("GEMINI_API_KEY"),
-                os.getenv("GEMINI_API_KEY_2"),
-                os.getenv("GEMINI_API_KEY_3"),
-            ]
-            if k
-        ]
-
-        if not api_keys and not use_vertex:
+        if not use_vertex:
             raise RuntimeError(
-                "No Gemini API keys configured. "
-                "Set at least GEMINI_API_KEY in your environment, "
-                "or set USE_VERTEX_AI=true with GOOGLE_APPLICATION_CREDENTIALS_JSON."
+                "Vertex AI is required. "
+                "Set USE_VERTEX_AI=true and provide GOOGLE_APPLICATION_CREDENTIALS_JSON."
             )
 
         agents = []
         for i in range(num_agents):
             strategy = base_strategies[i % len(base_strategies)]
-            api_key = api_keys[i % len(api_keys)] if api_keys else None
-            key_suffix = f"...{api_key[-4:]}" if api_key else "NONE"
             agent = GeminiDeepResearchAgent(
-                api_key=api_key,
                 agent_id=f"gemini-agent-{i + 1}",
                 strategy=strategy,
                 model=model,
             )
-            logger.info(f"Agent {i + 1} → key={key_suffix}, strategy={strategy.value}")
+            logger.info(f"Agent {i + 1} → Vertex AI, strategy={strategy.value}")
             agents.append(agent)
 
         return agents

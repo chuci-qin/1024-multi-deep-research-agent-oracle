@@ -213,12 +213,15 @@ docker run -d \
   --env-file .env \
   chuciqin1/1024-multi-deep-research-agent-oracle:latest
 
-# Or run with inline environment variables
+# Or run with inline environment variables (Vertex AI required)
 docker run -d \
   --name oracle \
   -p 8989:8989 \
-  -e GEMINI_API_KEY=your_api_key \
-  -e GEMINI_MODEL=gemini-3-flash-preview \
+  -e USE_VERTEX_AI=true \
+  -e VERTEX_AI_PROJECT=your-gcp-project-id \
+  -e VERTEX_AI_LOCATION=us-central1 \
+  -e GOOGLE_APPLICATION_CREDENTIALS_JSON='{"type":"service_account",...}' \
+  -e GEMINI_MODEL=gemini-2.5-flash \
   -e MIN_AGENTS=3 \
   -e CONSENSUS_THRESHOLD=1.0 \
   chuciqin1/1024-multi-deep-research-agent-oracle:latest
@@ -252,8 +255,11 @@ services:
     ports:
       - "8989:8989"
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GEMINI_MODEL=gemini-3-flash-preview
+      - USE_VERTEX_AI=true
+      - VERTEX_AI_PROJECT=${VERTEX_AI_PROJECT}
+      - VERTEX_AI_LOCATION=${VERTEX_AI_LOCATION:-us-central1}
+      - GOOGLE_APPLICATION_CREDENTIALS_JSON=${GOOGLE_APPLICATION_CREDENTIALS_JSON}
+      - GEMINI_MODEL=gemini-2.5-flash
       - MIN_AGENTS=3
       - CONSENSUS_THRESHOLD=1.0
       - REQUIRE_UNANIMOUS=true
@@ -276,14 +282,17 @@ services:
 # AI Provider API Keys
 # =============================================================================
 
-# Google Gemini API (Required)
-GEMINI_API_KEY=your_gemini_api_key
+# Google Vertex AI (Required — the only supported auth method)
+# NOTE: GEMINI_API_KEY / AI Studio mode is NOT supported.
+USE_VERTEX_AI=true
+VERTEX_AI_PROJECT=your-gcp-project-id
+VERTEX_AI_LOCATION=us-central1
+GOOGLE_APPLICATION_CREDENTIALS_JSON='{"type":"service_account",...}'
 
 # Gemini Model - Available models:
-# - gemini-3-flash-preview (latest, recommended)
-# - gemini-2.5-flash
+# - gemini-2.5-flash (recommended)
 # - gemini-2.0-flash
-GEMINI_MODEL=gemini-3-flash-preview
+GEMINI_MODEL=gemini-2.5-flash
 
 # OpenAI API (Optional)
 # OPENAI_API_KEY=your_openai_api_key
