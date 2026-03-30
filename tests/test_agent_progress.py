@@ -107,12 +107,11 @@ class TestProgressEventStructure:
         agent = GeminiDeepResearchAgent.__new__(GeminiDeepResearchAgent)
         agent.agent_id = "test-agent-1"
         agent._model_name = "test-model"
-        agent.strategy = "comprehensive"
+        from oracle.agents.base import AgentConfig, SearchStrategy
+        agent.strategy = SearchStrategy.COMPREHENSIVE
         agent._initialized = False
         agent.client = None
         agent.config = None
-
-        from oracle.agents.base import AgentConfig
 
         agent.config = AgentConfig()
 

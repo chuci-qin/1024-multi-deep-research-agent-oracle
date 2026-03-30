@@ -277,7 +277,7 @@ class ResultStore:
     TTL_SECONDS = 3600
 
     def __init__(self):
-        self._results: dict[str, ResultResponse] = {}
+        self._results: dict[str, ResultResponse | MultiOutcomeResultResponse] = {}
         self._status: dict[str, str] = {}
         self._timestamps: dict[str, float] = {}
 
@@ -316,7 +316,7 @@ class ResultStore:
         self._status[request_id] = f"failed: {error}"
         self._timestamps[request_id] = time.time()
 
-    def get(self, request_id: str) -> tuple[str, ResultResponse | None]:
+    def get(self, request_id: str) -> tuple[str, ResultResponse | MultiOutcomeResultResponse | None]:
         status = self._status.get(request_id, "not_found")
         result = self._results.get(request_id)
         return status, result
@@ -950,14 +950,42 @@ async def _build_result_response_from_oracle_result(
     request_id: str,
     request: ResolutionRequest,
     result,
-) -> ResultResponse:
-    """Build a ResultResponse from an OracleResult (used by SSE endpoint)."""
+) -> ResultResponse | MultiOutcomeResultResponse:
+    """Build a ResultResponse (binary) or MultiOutcomeResultResponse (multi) from an OracleResult."""
     from oracle.agents import StrategyFactory
     from oracle.consensus import StrictConsensusConfig, StrictConsensusEngine
+    from oracle.models import AgentResult, ConsensusResult, MultiOutcomeOracleResult, Outcome
     from oracle.storage import OracleResearchDataBuilder
 
     research_started_at = result.research_started_at
     research_completed_at = result.research_completed_at
+
+    is_multi = isinstance(result, MultiOutcomeOracleResult)
+
+    if is_multi:
+        binary_agent_results = [
+            AgentResult(
+                agent_id=ar.agent_id,
+                model=ar.model,
+                strategy=ar.strategy,
+                outcome=Outcome.YES if ar.outcome_index >= 0 else Outcome.UNDETERMINED,
+                confidence=ar.confidence,
+                reasoning=f"[Multi-outcome: {ar.outcome_label} (index={ar.outcome_index})] {ar.reasoning}",
+                sources=ar.sources,
+            )
+            for ar in result.agent_results
+        ]
+        binary_consensus = ConsensusResult(
+            reached=result.consensus.reached,
+            outcome=Outcome.YES if result.consensus.winning_outcome.is_determined else Outcome.UNDETERMINED,
+            confidence=result.consensus.confidence,
+            agreement_ratio=result.consensus.agreement_ratio,
+            weighted_ratio=result.consensus.weighted_ratio,
+            agent_count=result.consensus.agent_count,
+        )
+    else:
+        binary_agent_results = result.agent_results
+        binary_consensus = result.consensus
 
     builder = OracleResearchDataBuilder(
         market_id=request.market_id,
@@ -968,20 +996,24 @@ async def _build_result_response_from_oracle_result(
     builder.research_started_at = research_started_at
     builder.research_completed_at = research_completed_at
 
-    for agent_result in result.agent_results:
+    for agent_result in binary_agent_results:
         builder.add_agent_result(agent_result)
 
-    builder.set_consensus(result.consensus)
+    builder.set_consensus(binary_consensus)
     builder.set_merged_sources(result.merged_sources)
 
     agent_count = request.agent_count or 5
     strategies = [p.value for p in StrategyFactory.get_recommended_profiles(agent_count)]
 
+    if is_multi:
+        threshold = request.consensus_threshold or float(os.getenv("MULTI_OUTCOME_CONSENSUS_THRESHOLD", "0.80"))
+    else:
+        threshold = request.consensus_threshold or float(os.getenv("CONSENSUS_THRESHOLD", "0.66"))
+
     oracle_config = builder.build_config(
         agent_count=agent_count,
         agent_strategies=strategies,
-        consensus_threshold=request.consensus_threshold
-        or float(os.getenv("CONSENSUS_THRESHOLD", "0.66")),
+        consensus_threshold=threshold,
     )
     _, config_hash = oracle_config.get_hash_data()
 
@@ -989,26 +1021,24 @@ async def _build_result_response_from_oracle_result(
     _, research_hash = research_data.get_hash_data()
 
     strict_engine = StrictConsensusEngine(
-        config=StrictConsensusConfig(
-            threshold=request.consensus_threshold
-            or float(os.getenv("CONSENSUS_THRESHOLD", "0.66")),
+        config=StrictConsensusConfig(threshold=threshold)
+    )
+    strict_consensus, provable_data = strict_engine.calculate_strict(binary_agent_results)
+
+    weighted_ratio = result.consensus.weighted_ratio
+
+    ipfs_mock = (
+        result.ipfs_cid is None
+        or not result.ipfs_cid
+        or os.path.exists(
+            os.path.join(os.getcwd(), ".ipfs_mock", f"{result.ipfs_cid}.json")
         )
     )
-    strict_consensus, provable_data = strict_engine.calculate_strict(result.agent_results)
 
-    from oracle.models import MultiOutcomeOracleResult
-    if isinstance(result, MultiOutcomeOracleResult):
-        outcome_str = result.consensus.winning_outcome.outcome_label
-        weighted_ratio = result.consensus.weighted_ratio
-    else:
-        outcome_str = result.consensus.outcome.value
-        weighted_ratio = result.consensus.weighted_ratio
-
-    return ResultResponse(
+    shared_kwargs = dict(
         request_id=request_id,
         market_id=request.market_id,
         status="completed",
-        outcome=outcome_str,
         confidence=result.consensus.confidence,
         agreement_ratio=result.consensus.agreement_ratio,
         weighted_ratio=weighted_ratio,
@@ -1039,13 +1069,22 @@ async def _build_result_response_from_oracle_result(
         ),
         research_started_at=research_started_at,
         research_completed_at=research_completed_at,
-        ipfs_mock=(
-            result.ipfs_cid is None
-            or not result.ipfs_cid
-            or os.path.exists(
-                os.path.join(os.getcwd(), ".ipfs_mock", f"{result.ipfs_cid}.json")
-            )
-        ),
+        ipfs_mock=ipfs_mock,
+    )
+
+    if is_multi:
+        winning = result.consensus.winning_outcome
+        return MultiOutcomeResultResponse(
+            **shared_kwargs,
+            outcome_index=winning.outcome_index if hasattr(winning, "outcome_index") else None,
+            outcome_label=winning.outcome_label,
+            outcomes=result.outcomes if hasattr(result, "outcomes") else None,
+            vote_distribution=result.consensus.vote_distribution,
+        )
+
+    return ResultResponse(
+        **shared_kwargs,
+        outcome=result.consensus.outcome.value,
     )
 
 

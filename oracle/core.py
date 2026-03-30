@@ -910,7 +910,7 @@ class MultiAgentOracle:
                 "ipfsCid": ipfs_cid,
                 "agentCount": len(agent_results),
                 "validAgentCount": valid_count,
-                "requiresManualReview": not consensus.reached,
+                "requiresManualReview": not consensus.reached or consensus.requires_human_review,
                 "researchStartedAt": started_at,
                 "researchCompletedAt": completed_at,
                 "_result": result,
